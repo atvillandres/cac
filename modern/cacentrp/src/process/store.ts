@@ -69,6 +69,20 @@ export interface IntInpFlRow {
   iclrdt: string;
 }
 
+/** Port of BRSFILEX row written by w_brsinterfaceprocess. */
+export interface BrsFileXRow {
+  coCode: string;
+  refNo: string;
+  refDate: string;
+  itemNo: number;
+  clientName: string;
+  agentCode: string;
+  polNo: string;
+  chkClrNo: number;
+  sourceFl: string;
+  procDate: string;
+}
+
 /** Port of GLWDTL / d_glwlspdtl — decimal amounts (pre fixed-width). */
 export interface GlwDtlStoreRow {
   gwrect?: string;
@@ -122,6 +136,7 @@ export interface DailyStore {
   apDepositX: ApDepositStoreRow[];
   intInpFl: IntInpFlRow[];
   glwDtl: GlwDtlStoreRow[];
+  brsFileX: BrsFileXRow[];
 }
 
 export function createStore(seed?: Partial<DailyStore>): DailyStore {
@@ -139,6 +154,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     apDepositX: seed?.apDepositX ? [...seed.apDepositX] : [],
     intInpFl: seed?.intInpFl ? [...seed.intInpFl] : [],
     glwDtl: seed?.glwDtl ? [...seed.glwDtl] : [],
+    brsFileX: seed?.brsFileX ? [...seed.brsFileX] : [],
   };
 }
 

@@ -18,7 +18,8 @@ node dist/index.js daily focus
 node dist/index.js daily cdr
 node dist/index.js daily glwalker --out /tmp/glw
 node dist/index.js daily lspupload --out /tmp/lsp
+node dist/index.js daily brs --inbound /tmp/bis
 npm test
 ```
 
-Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md), [`docs/glwalker.md`](docs/glwalker.md), [`docs/lsp-upload.md`](docs/lsp-upload.md).
+Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md), [`docs/glwalker.md`](docs/glwalker.md), [`docs/lsp-upload.md`](docs/lsp-upload.md), [`docs/brs-upload.md`](docs/brs-upload.md).

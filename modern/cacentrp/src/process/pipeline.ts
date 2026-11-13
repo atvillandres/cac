@@ -65,8 +65,8 @@ export const DAILY_STAGES: PipelineStage[] = [
     menuId: "m_brsupload",
     title: "BRS Upload",
     window: "w_brsinterfaceprocess",
-    status: "pending",
-    notes: "Interactive BRS interface window",
+    status: "ported",
+    notes: "I:\\BIS\\*.ALI → CURRLEDGE + BRSFILEX + BDOAPMST (BI1 control check)",
   },
   {
     id: "lsp-upload",
