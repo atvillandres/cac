@@ -194,7 +194,7 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
         ok: true,
       });
     } else if (file.kind === "SSI") {
-      store.grpFile = file.rows ? [...file.rows] : [{ importedFrom: file.path }];
+      store.grpFile = file.rows ? (file.rows as unknown as import("./store.js").GrpFileRow[]) : [];
       store.bdoApMst.push({
         company: "ALAI",
         bdoCode: "SSI",
@@ -207,7 +207,9 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
       ssiFiles++;
       logs.push({
         step: "ssi",
-        detail: `${file.path} → GRPFILE → w_grpinterfaceprocess`,
+        detail:
+          `${file.path} → GRPFILE → w_grpinterfaceprocess` +
+          (store.grpFile.length ? ` (${store.grpFile.length} rows)` : " (empty — run daily grp after load)"),
         ok: true,
       });
     } else {

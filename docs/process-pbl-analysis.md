@@ -48,7 +48,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 
 ## Modernization status
 
-- Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|inspect`)
+- Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp|inspect`)
 - End-of-day against in-memory ledger store
 - Unload orchestrator skeleton (mail / FOCUS / CDR / BRS / SSI) with mock adapters
 - FOCUS / CDR → `CURRLEDGE` mapping
@@ -56,7 +56,8 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
 - BRS `.ALI` upload — see [`docs/brs-upload.md`](brs-upload.md)
 - BPY DBF mapping — see [`docs/bpy-mapping.md`](bpy-mapping.md)
+- SSI/GRP DBF mapping — see [`docs/grp-ssi-mapping.md`](grp-ssi-mapping.md)
 - TRANEXT schemas JSON from sample DBFs
 - Object inventory (166 source objects)
 
-Next slice: SSI (`w_grpinterfaceprocess`), then deepen unload.
+Next slice: deepen `w_unload` / `w_user_unload` (mail + DBF load + TRANEXT writers).

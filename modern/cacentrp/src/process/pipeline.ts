@@ -69,6 +69,14 @@ export const DAILY_STAGES: PipelineStage[] = [
     notes: "BPYFILE ⋈ ACCTENT (DTLTYPE/INCKNO) → CURRLEDGE; archive BPYFILEX",
   },
   {
+    id: "grp-map",
+    menuId: "(from w_unload GRP)",
+    title: "SSI / GRP DBF accounting entry mapping",
+    window: "w_grpinterfaceprocess",
+    status: "ported",
+    notes: "GRPFILE ⋈ ACCTENT (DTLTYPE) → CURRLEDGE FO=SSI; archive GRPFILEX",
+  },
+  {
     id: "brs-upload",
     menuId: "m_brsupload",
     title: "BRS Upload",
