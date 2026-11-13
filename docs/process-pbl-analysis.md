@@ -46,12 +46,14 @@ Writers in `w_unload`: `wf_write2{ra,rb,rc,rc1,rd,re,rf,va…vh,cs,da,apdep,aptr
 
 Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLEDGE` → `DELETE FROM CURRLEDGE` → `COMMIT`.
 
-## Modernization in this pass
+## Modernization status
 
-- Pipeline stage model + CLI (`daily list|run|endofday|inspect`)
-- Full end-of-day against in-memory ledger store
+- Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|inspect`)
+- End-of-day against in-memory ledger store
 - Unload orchestrator skeleton (mail / FOCUS / CDR / BRS / SSI) with mock adapters
+- FOCUS / CDR → `CURRLEDGE` mapping
+- GL Walker NLSP → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
 - TRANEXT schemas JSON from sample DBFs
 - Object inventory (166 source objects)
 
-Deep ports of `w_focusinterfaceprocess` / `w_glwalker` / `w_lspupload` mapping logic are next slices.
+Next slice: `w_lspupload` / LSP `GLWDTL` merge into GL Walker.

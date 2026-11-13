@@ -1,5 +1,6 @@
 node_modules/
 dist/
+modern/cacentrp/out/
 *.log
 .DS_Store
 legacy/cac entrp/**/*.dll

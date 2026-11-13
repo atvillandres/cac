@@ -16,7 +16,8 @@ node dist/index.js daily list
 node dist/index.js daily run --seed-ledger
 node dist/index.js daily focus
 node dist/index.js daily cdr
+node dist/index.js daily glwalker --out /tmp/glw
 npm test
 ```
 
-Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md).
+Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md), [`docs/glwalker.md`](docs/glwalker.md).
