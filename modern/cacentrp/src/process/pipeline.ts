@@ -34,7 +34,15 @@ export const DAILY_STAGES: PipelineStage[] = [
     title: "Auto Email Detach",
     window: "w_unload",
     status: "ported",
-    notes: "Mail+inbound orchestrator; mapDownstream → FOCUS/CDR/BPY/GRP (TRANEXT writers still stub)",
+    notes: "Mail+inbound orchestrator; mapDownstream → FOCUS/CDR/BPY/GRP; optional TRANEXT dir → wf_write2*",
+  },
+  {
+    id: "tranext-load",
+    menuId: "(from w_unload FOCUS)",
+    title: "TRANEXT DBF → working tables",
+    window: "w_unload wf_write2*",
+    status: "ported",
+    notes: "ImportFile CS/DA/RA/… → CASHBALANCE / DEPOSITSLIP / ORMAINCURR + raw packs",
   },
   {
     id: "focus-map",
@@ -125,6 +133,7 @@ export interface DailyRunOptions {
   messages?: MailMessage[];
   inboundPaths?: string[];
   mapDownstream?: boolean;
+  tranextDir?: string;
   endOfDay?: Partial<EndOfDayOptions>;
 }
 
@@ -146,6 +155,7 @@ export function runDailyPipeline(opts: DailyRunOptions): DailyRunResult {
       kind: detectInboundKind(path),
     })),
     mapDownstream: opts.mapDownstream ?? true,
+    tranextDir: opts.tranextDir,
   };
   const unload = runUnload(store, unloadInput);
 

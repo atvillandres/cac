@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
+ *   cacentrp daily list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -33,6 +33,7 @@ import { buildDemoAliContent, runBrsUpload } from "./process/brs.js";
 import { demoBpyRows, runBpyMapping } from "./process/bpy.js";
 import { demoGrpRows, runGrpMapping } from "./process/grp.js";
 import { DEMO_ACCTENT } from "./process/fixtures.js";
+import { runTranextLoad } from "./process/tranext.js";
 import type { AppContext, Variant } from "./types.js";
 import { mkdirSync, writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -43,7 +44,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
+  cacentrp daily <list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -62,6 +63,7 @@ Daily options:
   --message-file <path>   Synthetic mail attachment path
   --map                  Invoke FOCUS/CDR/BPY/GRP after unload (default)
   --no-map               Classify/load only; skip downstream mappers
+  --tranext <dir>         TRANEXT *.DBF directory (ImportFile + wf_write2*)
   --no-glwalker           End-of-day refuses unless GL Walker confirmed
   --no-archive            End-of-day cancel confirm
   --out <dir>             Output directory for glwalker .GLW / lspupload .lsp trees
@@ -104,6 +106,7 @@ function parseDailyArgs(argv: string[]) {
     messageSubject?: string;
     messageFiles: string[];
     mapDownstream: boolean;
+    tranextDir?: string;
     glWalkerDone: boolean;
     confirmArchive: boolean;
     outDir?: string;
@@ -127,6 +130,7 @@ function parseDailyArgs(argv: string[]) {
     else if (a === "--message-file") opts.messageFiles.push(argv[++i]!);
     else if (a === "--map") opts.mapDownstream = true;
     else if (a === "--no-map") opts.mapDownstream = false;
+    else if (a === "--tranext") opts.tranextDir = resolve(argv[++i]!);
     else if (a === "--no-glwalker") opts.glWalkerDone = false;
     else if (a === "--no-archive") opts.confirmArchive = false;
     else if (a === "--out") opts.outDir = resolve(argv[++i]!);
@@ -253,6 +257,7 @@ function runDailyCommand(argv: string[]) {
           ? opts.inbound
           : ["C:\\tci\\inbound\\0806BPY.DBF", "C:\\tci\\inbound\\0806GRP.DBF"],
       mapDownstream: opts.mapDownstream,
+      tranextDir: opts.tranextDir,
       endOfDay: {
         glWalkerDone: opts.glWalkerDone,
         confirmArchive: opts.confirmArchive,
@@ -295,6 +300,7 @@ function runDailyCommand(argv: string[]) {
       messages,
       inbound,
       mapDownstream: opts.mapDownstream,
+      tranextDir: opts.tranextDir,
     });
     for (const log of unload.logs) {
       console.log(`${log.ok ? "OK" : "!!"} [${log.step}] ${log.detail}`);
@@ -308,7 +314,33 @@ function runDailyCommand(argv: string[]) {
     if (unload.tranextPlan.length) {
       console.log(`tranext plan: ${unload.tranextPlan.join(",")}`);
     }
+    console.log(
+      `ORMAINCURR=${store.orMainCurr.length} DEPOSITSLIP=${store.depositSlip.length} CASHBAL=${store.cashBalance.length}`,
+    );
     console.log(`CURRLEDGE=${store.currLedge.length}`);
+    return;
+  }
+
+  if (opts.cmd === "tranext") {
+    const store = createStore();
+    const dir = opts.tranextDir ?? resolve(PKG_ROOT, "fixtures/tranext");
+    const result = runTranextLoad(store, {
+      dir,
+      company: "ALAI",
+      foCode: "106",
+      userId: opts.userId,
+    });
+    for (const r of result.results) {
+      console.log(
+        `${r.ok ? "OK" : "!!"} [${r.code}] ${r.detail} read=${r.read} write=${r.written} reject=${r.rejected}`,
+      );
+    }
+    console.log(result.detail);
+    console.log(
+      `ORMAINCURR=${store.orMainCurr.length} DEPOSITSLIP=${store.depositSlip.length} CASHBAL=${store.cashBalance.length} FO_CTRL=${store.foControl.length}`,
+    );
+    const rawKeys = Object.keys(store.tranextRaw).sort();
+    console.log(`tranextRaw codes: ${rawKeys.join(",") || "(none)"}`);
     return;
   }
 
@@ -482,7 +514,7 @@ function runDailyCommand(argv: string[]) {
   }
 
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
   );
 }
 
