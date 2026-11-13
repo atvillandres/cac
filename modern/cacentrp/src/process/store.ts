@@ -146,6 +146,9 @@ export interface BpyFileRow {
   dtlType: string;
 }
 
+/** Port of GRPFILE / GRPFILEX (unload SSI → w_grpinterfaceprocess). */
+export type GrpFileRow = BpyFileRow;
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
@@ -153,7 +156,8 @@ export interface DailyStore {
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
-  grpFile: Record<string, unknown>[];
+  grpFile: GrpFileRow[];
+  grpFileX: GrpFileRow[];
   cashBalance: CashBalanceRow[];
   cashBalanceX: CashBalanceRow[];
   apTrans: ApTransStoreRow[];
@@ -174,6 +178,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
     grpFile: seed?.grpFile ? [...seed.grpFile] : [],
+    grpFileX: seed?.grpFileX ? [...seed.grpFileX] : [],
     cashBalance: seed?.cashBalance ? [...seed.cashBalance] : [],
     cashBalanceX: seed?.cashBalanceX ? [...seed.cashBalanceX] : [],
     apTrans: seed?.apTrans ? [...seed.apTrans] : [],

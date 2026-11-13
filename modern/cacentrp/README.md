@@ -33,17 +33,18 @@ npm run daily -- glwalker --out /tmp/glw
 npm run daily -- lspupload --out /tmp/lsp
 npm run daily -- brs --inbound /tmp/bis
 npm run daily -- bpy
+npm run daily -- grp
 npm test
 ```
 
-See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](../../docs/focus-cdr-mapping.md), [`docs/glwalker.md`](../../docs/glwalker.md), [`docs/lsp-upload.md`](../../docs/lsp-upload.md), [`docs/brs-upload.md`](../../docs/brs-upload.md), and [`docs/bpy-mapping.md`](../../docs/bpy-mapping.md).
+See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](../../docs/focus-cdr-mapping.md), [`docs/glwalker.md`](../../docs/glwalker.md), [`docs/lsp-upload.md`](../../docs/lsp-upload.md), [`docs/brs-upload.md`](../../docs/brs-upload.md), [`docs/bpy-mapping.md`](../../docs/bpy-mapping.md), and [`docs/grp-ssi-mapping.md`](../../docs/grp-ssi-mapping.md).
 
 ## Layout
 
 - `src/exe/manifest.ts` — library list the EXE would load  
 - `src/config/ini.ts` — `ProfileString`-compatible INI reader  
 - `src/app/*` — ports of recovered shell PowerScript  
-- `src/process/*` — daily pipeline (unload, FOCUS/CDR, BPY, BRS, LSP, GL Walker, end-of-day)  
+- `src/process/*` — daily pipeline (unload, FOCUS/CDR, BPY, SSI/GRP, BRS, LSP, GL Walker, end-of-day)  
 - `legacy-source/` — recovered PowerScript (`cac.pbl` + key `process.pbl` objects)  
 - `src/db/adapter.ts` — mock DB (wire real ODBC/Postgres later)
 

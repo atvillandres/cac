@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy
+ *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -31,6 +31,7 @@ import { runGlWalkerAllCompanies } from "./process/glwalker.js";
 import { runLspUpload, seedDemoLspLedger } from "./process/lspupload.js";
 import { buildDemoAliContent, runBrsUpload } from "./process/brs.js";
 import { demoBpyRows, runBpyMapping } from "./process/bpy.js";
+import { demoGrpRows, runGrpMapping } from "./process/grp.js";
 import { DEMO_ACCTENT } from "./process/fixtures.js";
 import type { AppContext, Variant } from "./types.js";
 import { mkdirSync, writeFileSync, statSync } from "node:fs";
@@ -42,7 +43,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy> [daily-options]
+  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -419,8 +420,39 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
+  if (opts.cmd === "grp" || opts.cmd === "ssi") {
+    const store = createStore();
+    store.grpFile = demoGrpRows();
+    store.bdoApMst.push({
+      company: "ALAI",
+      bdoCode: "SSI",
+      source: "1",
+      processDate: new Date().toISOString().slice(0, 10),
+      status: "Y",
+      subFile: "61113GRP",
+      userId: opts.userId,
+    });
+    const result = runGrpMapping(store, {
+      proc: {
+        compCode: "ALAI",
+        foCode: "SSI",
+        dateRec: "2026-11-13",
+        fileName: "61113GRP",
+        batchFile: "Error.bat",
+      },
+      acctEnt: DEMO_ACCTENT,
+      userId: opts.userId,
+      units: { syrUnit: { "ALAI|001": "M001" } },
+    });
+    console.log(`${result.ok ? "OK" : "!!"} ${result.detail}`);
+    console.log(
+      `batch=${result.batchFile} currledge=${store.currLedge.length} grpfilex=${store.grpFileX.length} DR=${result.totals.debit} CR=${result.totals.credit}`,
+    );
+    return;
+  }
+
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
   );
 }
 
