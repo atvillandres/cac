@@ -2,13 +2,13 @@
  * Port of w_focusinterfaceprocess / w_alaifocusproc ue_process orchestration.
  *
  * Stages (legacy order):
- *   collection → collPdr → disbursement → fundTransfer → deposit →
- *   balentries → processcomplete('L')
+ *   collection → collPdr → disbursement → fundTransfer → disbNet →
+ *   deposit → balentries → processcomplete('L')
  *
  * Full DataWindow SQL mapping is enormous; this slice implements the control
- * flow, CURRLEDGE row assembly from simplified OR/DIS/PDR/fund-transfer
- * working sets + ACCTENT, UNBALDOC (f_write2unbaldoc), and archive/commit
- * semantics of wf_processcomplete / reject.
+ * flow, CURRLEDGE row assembly from simplified OR/DIS/PDR/fund-transfer/
+ * net-disbursement working sets + ACCTENT, UNBALDOC (f_write2unbaldoc),
+ * and archive/commit semantics of wf_processcomplete / reject.
  */
 import {
   applyAcctEnt,
@@ -111,6 +111,35 @@ export interface FundTransferLine {
   lspOrType?: string;
 }
 
+/**
+ * Pre-joined net disbursement line (dw_disbmapcashnet / dw_dismapchecknet).
+ * Amount is already netted (`disnetamt`). Bank accounts (SYRBANK) are skipped
+ * on the non-bank pass; check path then posts bank lines as CR.
+ */
+export interface DisNetLine {
+  disNo: string;
+  disDate: string;
+  currency: string;
+  /** CSH = cash-net path; CHK = check-net path */
+  payMode: "CSH" | "CHK";
+  acctCode: string;
+  drCr: "DR" | "CR";
+  amount: number;
+  itemNo?: number;
+  payType?: string;
+  unit?: string;
+  origCy?: string;
+  locCy?: string;
+  lob?: string;
+  agtNo?: string;
+  recDest?: string;
+  controlNo?: string;
+  lspAccType?: string;
+  lspOrType?: string;
+  /** When true (or acct in bankAcctCodes), treated as SYRBANK account. */
+  isBank?: boolean;
+}
+
 export interface FocusInput {
   proc: ProcCdrVar;
   params: CacParams;
@@ -125,6 +154,15 @@ export interface FocusInput {
   disItems?: DisItemRow[];
   fundTransferDebits?: FundTransferLine[];
   fundTransferCredits?: FundTransferLine[];
+  /**
+   * SYRNETPARM product gate — when empty/absent, disbNet is a no-op unless
+   * `disNetLines` is provided (caller already filtered). When set with no
+   * lines, stage reports skipped.
+   */
+  netProdCodes?: string[];
+  /** SYRBANK.ACCTCODE list — marks bank lines when `isBank` not set. */
+  bankAcctCodes?: string[];
+  disNetLines?: DisNetLine[];
   deposits?: DepositRow[];
 }
 
@@ -194,13 +232,44 @@ function pushMapped(
   return null;
 }
 
+type LedgerLineIn = {
+  disNo: string;
+  disDate: string;
+  currency: string;
+  acctCode: string;
+  drCr: "DR" | "CR";
+  amount: number;
+  itemNo?: number;
+  payType?: string;
+  unit?: string;
+  origCy?: string;
+  locCy?: string;
+  lob?: string;
+  recDest?: string;
+  controlNo?: string;
+  lspAccType?: string;
+  lspOrType?: string;
+};
+
+function applyUsdGainLoss(input: FocusInput, row: CurrLedgeRow): void {
+  const gainAcct = (input.params.realizedGainLossAcct ?? "").trim();
+  if (!gainAcct) return;
+  if (row.acctCode.trim() !== gainAcct) return;
+  if ((row.origCy ?? "").trim().toUpperCase() !== "USD") return;
+  const rate = input.params.bookingRate ?? 1;
+  row.amount = round2(row.amount * rate);
+  row.origCy = "PHP";
+}
+
 function pushFundLine(
   out: CurrLedgeRow[],
   input: FocusInput,
-  line: FundTransferLine,
+  line: LedgerLineIn,
   today: string,
+  opts?: { forceDrCr?: "DR" | "CR" },
 ): CurrLedgeRow {
-  const { drCr, amount } = normalizeDrCrAmount(line.drCr, line.amount);
+  const side = opts?.forceDrCr ?? line.drCr;
+  const { drCr, amount } = normalizeDrCrAmount(side, line.amount);
   const row: CurrLedgeRow = {
     coCode: input.proc.compCode,
     foCode: input.proc.foCode,
@@ -225,8 +294,15 @@ function pushFundLine(
     userId: input.userId,
     numberSign: numberSignFor(drCr, line.acctCode),
   };
+  applyUsdGainLoss(input, row);
+  row.numberSign = numberSignFor(row.drCr, row.acctCode);
   out.push(row);
   return row;
+}
+
+function isBankLine(line: DisNetLine, bankAccts: Set<string>): boolean {
+  if (line.isBank) return true;
+  return bankAccts.has(line.acctCode.trim().toUpperCase());
 }
 
 function updateBdoStatus(store: DailyStore, input: FocusInput, status: string): number {
@@ -511,6 +587,130 @@ export function processFundTransfer(
   };
 }
 
+/**
+ * Port of wf_procdisbnet — map netted DIS cash/check lines (SYRNETPARM products).
+ * Bank-only check docs are skipped (deferred to fund transfer in legacy).
+ * Per-doc imbalance → UNBALDOC + BDOAPMST Q; grand-total imbalance → H.
+ */
+export function processDisbNet(
+  store: DailyStore,
+  input: FocusInput,
+  out: CurrLedgeRow[],
+): FocusStageResult {
+  const lines = input.disNetLines ?? [];
+  if (lines.length === 0) {
+    return {
+      stage: "disbNet",
+      ok: true,
+      detail:
+        (input.netProdCodes?.length ?? 0) > 0
+          ? "No net-disbursement lines for SYRNETPARM products"
+          : "No net-disbursement documents",
+      rowsAdded: 0,
+    };
+  }
+
+  const bankAccts = new Set(
+    (input.bankAcctCodes ?? []).map((a) => a.trim().toUpperCase()).filter(Boolean),
+  );
+  const today = new Date().toISOString().slice(0, 10);
+
+  type Key = string;
+  const keys: Key[] = [];
+  const seen = new Set<Key>();
+  for (const line of lines) {
+    const k = `${line.payMode}\0${line.disNo}\0${line.currency}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      keys.push(k);
+    }
+  }
+
+  let added = 0;
+  let skippedFt = 0;
+  let unbalCount = 0;
+  let gtDebit = 0;
+  let gtCredit = 0;
+
+  for (const key of keys) {
+    const [payMode, disNo, currency] = key.split("\0") as ["CSH" | "CHK", string, string];
+    const docLines = lines.filter(
+      (l) => l.payMode === payMode && l.disNo === disNo && l.currency === currency,
+    );
+    const banks = docLines.filter((l) => isBankLine(l, bankAccts));
+    const nonBanks = docLines.filter((l) => !isBankLine(l, bankAccts));
+
+    // Legacy: when every DISITEMDTL line is a bank acct, defer to fund transfer
+    if (payMode === "CHK" && docLines.length > 0 && nonBanks.length === 0) {
+      skippedFt++;
+      continue;
+    }
+
+    let docDebit = 0;
+    let docCredit = 0;
+    let wrote = false;
+
+    const accumulate = (row: CurrLedgeRow) => {
+      wrote = true;
+      added++;
+      if (row.drCr === "DR") {
+        docDebit = round2(docDebit + row.amount);
+        gtDebit = round2(gtDebit + row.amount);
+      } else {
+        docCredit = round2(docCredit + row.amount);
+        gtCredit = round2(gtCredit + row.amount);
+      }
+    };
+
+    // Non-bank pass (cash and check)
+    for (const line of nonBanks) {
+      accumulate(pushFundLine(out, input, line, today));
+    }
+
+    // Check path: bank entries forced CR (dw_dismapdischeck2)
+    if (payMode === "CHK") {
+      for (const line of banks) {
+        accumulate(pushFundLine(out, input, line, today, { forceDrCr: "CR" }));
+      }
+    }
+
+    if (docDebit !== docCredit || !wrote) {
+      writeUnbalDoc(store, input, disNo, docDebit, docCredit, today);
+      unbalCount++;
+    }
+  }
+
+  if (unbalCount > 0) {
+    updateBdoStatus(store, input, "Q");
+    return {
+      stage: "disbNet",
+      ok: false,
+      detail: `${unbalCount} unbalanced net-DIS doc(s); BDOAPMST=Q; mapped ${added}` +
+        (skippedFt ? `; skipped ${skippedFt} fund-transfer deferral(s)` : ""),
+      rowsAdded: added,
+    };
+  }
+
+  if (gtDebit !== gtCredit) {
+    updateBdoStatus(store, input, "H");
+    return {
+      stage: "disbNet",
+      ok: false,
+      detail: `Net-DIS grand total imbalance DR=${gtDebit} CR=${gtCredit}; BDOAPMST=H`,
+      rowsAdded: added,
+    };
+  }
+
+  return {
+    stage: "disbNet",
+    ok: true,
+    detail:
+      `Mapped ${added} net-DIS line(s) across ${keys.length - skippedFt} doc(s)` +
+      (skippedFt ? `; deferred ${skippedFt} to fund transfer` : ""),
+    rowsAdded: added,
+  };
+}
+
 export function processDeposit(input: FocusInput, out: CurrLedgeRow[]): FocusStageResult {
   let added = 0;
   const ctx = {
@@ -686,6 +886,13 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
   const ft = processFundTransfer(store, input, mapFocus);
   stages.push(ft);
   if (!ft.ok) {
+    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+  }
+
+  // Legacy: wf_procdisbnet runs at end of wf_processdisbursement after fund transfer
+  const net = processDisbNet(store, input, mapFocus);
+  stages.push(net);
+  if (!net.ok) {
     return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
   }
 

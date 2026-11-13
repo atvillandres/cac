@@ -2,7 +2,12 @@
  *   npx tsx src/process/focus-cdr.test.ts
  */
 import { createStore } from "./store.js";
-import { numberSignFor, runFocusMapping, type FocusInput } from "./focus.js";
+import {
+  numberSignFor,
+  processDisbNet,
+  runFocusMapping,
+  type FocusInput,
+} from "./focus.js";
 import { runCdrMapping } from "./cdr.js";
 import { debitCreditTotals } from "./currledge.js";
 import { demoCdrInput, demoFocusInput, DEMO_ACCTENT, DEMO_PARAMS } from "./fixtures.js";
@@ -12,7 +17,7 @@ function check(cond: boolean, msg: string): void {
 }
 
 const STAGE_ORDER =
-  "collection,collPdr,disbursement,fundTransfer,deposit,balance,complete";
+  "collection,collPdr,disbursement,fundTransfer,disbNet,deposit,balance,complete";
 
 // FOCUS happy path
 {
@@ -202,6 +207,227 @@ const STAGE_ORDER =
   check(numberSignFor("DR", "205002") === "*", "clearing *");
   check(numberSignFor("CR", "214000") === " ", "CR no star");
   check(numberSignFor("DR", "101001") === " ", "other acct");
+}
+
+// Net disbursement (wf_procdisbnet) — balanced cash-net
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    netProdCodes: ["P", "S", "D"],
+    bankAcctCodes: ["102900"],
+    disNetLines: [
+      {
+        disNo: "DN000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        acctCode: "501200",
+        drCr: "DR",
+        amount: 1200,
+        itemNo: 1,
+        payType: "CSH",
+      },
+      {
+        disNo: "DN000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        acctCode: "101200",
+        drCr: "CR",
+        amount: 1200,
+        itemNo: 2,
+        payType: "CSH",
+      },
+      // bank line on cash path is skipped
+      {
+        disNo: "DN000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        acctCode: "102900",
+        drCr: "DR",
+        amount: 999,
+        isBank: true,
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `disbNet failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  const net = result.stages.find((s) => s.stage === "disbNet");
+  check(net?.rowsAdded === 2, `expected 2 net lines, got ${net?.rowsAdded}`);
+  check(
+    !result.mapFocus.some((r) => r.refNo === "DN000001" && r.acctCode === "102900"),
+    "cash-net must skip bank acct",
+  );
+  check(store.unbalDocs.length === 0, "balanced net doc");
+}
+
+// Net disbursement check path — bank lines forced CR; all-bank doc deferred
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    proc: {
+      compCode: "ALAI",
+      foCode: "001",
+      dateRec: today,
+      fileName: "0806XXX",
+      batchFile: "Error.bat",
+    },
+    params: DEMO_PARAMS,
+    acctEnt: DEMO_ACCTENT,
+    userId: "DEMO",
+    bankAcctCodes: ["102900"],
+    disNetLines: [
+      {
+        disNo: "DNCHK001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CHK",
+        acctCode: "501300",
+        drCr: "DR",
+        amount: 400,
+        payType: "CHK",
+      },
+      {
+        disNo: "DNCHK001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CHK",
+        acctCode: "102900",
+        drCr: "DR",
+        amount: 400,
+        payType: "CHK",
+        isBank: true,
+      },
+      // all-bank doc → fund-transfer deferral
+      {
+        disNo: "DNFT0001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CHK",
+        acctCode: "102900",
+        drCr: "DR",
+        amount: 50,
+        isBank: true,
+      },
+    ],
+  };
+  const out: import("./currledge.js").CurrLedgeRow[] = [];
+  const stage = processDisbNet(store, input, out);
+  check(stage.ok, `check-net failed: ${stage.detail}`);
+  check(stage.rowsAdded === 2, `expected 2 mapped (non-bank + bank CR), got ${stage.rowsAdded}`);
+  check(stage.detail.includes("deferred 1"), `detail=${stage.detail}`);
+  const bankRow = out.find((r) => r.acctCode === "102900" && r.refNo === "DNCHK001");
+  check(bankRow?.drCr === "CR", "bank line forced CR");
+  check(!out.some((r) => r.refNo === "DNFT0001"), "all-bank doc not mapped");
+}
+
+// Net disbursement unbalanced → UNBALDOC Q
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    proc: {
+      compCode: "ALAI",
+      foCode: "001",
+      dateRec: today,
+      fileName: "0806XXX",
+      batchFile: "Error.bat",
+    },
+    params: DEMO_PARAMS,
+    acctEnt: DEMO_ACCTENT,
+    userId: "DEMO",
+    disNetLines: [
+      {
+        disNo: "DNBAD001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        acctCode: "501200",
+        drCr: "DR",
+        amount: 100,
+      },
+      {
+        disNo: "DNBAD001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        acctCode: "101200",
+        drCr: "CR",
+        amount: 40,
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "unbal net should fail");
+  check(store.unbalDocs.some((u) => u.docNum === "DNBAD001"), "UNBALDOC for net");
+  check(store.bdoApMst[0].status === "Q", "BDOAPMST Q");
+}
+
+// USD realized gain/loss conversion on net lines
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    proc: {
+      compCode: "ALAI",
+      foCode: "001",
+      dateRec: today,
+      fileName: "0806XXX",
+      batchFile: "Error.bat",
+    },
+    params: { ...DEMO_PARAMS, bookingRate: 50 },
+    acctEnt: DEMO_ACCTENT,
+    userId: "DEMO",
+    disNetLines: [
+      {
+        disNo: "DNUSD001",
+        disDate: today,
+        currency: "USD",
+        payMode: "CSH",
+        acctCode: "490001",
+        drCr: "DR",
+        amount: 10,
+        origCy: "USD",
+      },
+      {
+        disNo: "DNUSD001",
+        disDate: today,
+        currency: "USD",
+        payMode: "CSH",
+        acctCode: "101200",
+        drCr: "CR",
+        amount: 500,
+        origCy: "PHP",
+      },
+    ],
+  };
+  const out: import("./currledge.js").CurrLedgeRow[] = [];
+  const stage = processDisbNet(store, input, out);
+  check(stage.ok, `usd gain/loss failed: ${stage.detail}`);
+  const gain = out.find((r) => r.acctCode === "490001");
+  check(gain?.amount === 500 && gain.origCy === "PHP", `gain converted: ${JSON.stringify(gain)}`);
 }
 
 // CDR happy path
