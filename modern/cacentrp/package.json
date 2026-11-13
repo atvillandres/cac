@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/process/endofday.test.ts && tsx src/process/focus-cdr.test.ts && tsx src/process/glwalker.test.ts && tsx src/process/lspupload.test.ts && tsx src/process/brs.test.ts",
+    "test": "tsx src/process/endofday.test.ts && tsx src/process/focus-cdr.test.ts && tsx src/process/glwalker.test.ts && tsx src/process/lspupload.test.ts && tsx src/process/brs.test.ts && tsx src/process/bpy.test.ts",
     "daily": "tsx src/index.ts daily"
   },
   "engines": {

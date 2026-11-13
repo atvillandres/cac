@@ -61,6 +61,14 @@ export const DAILY_STAGES: PipelineStage[] = [
     notes: "Same unload path without MAPI; shares writers with w_unload",
   },
   {
+    id: "bpy-map",
+    menuId: "(from w_unload BPY)",
+    title: "BPY / BRS DBF accounting entry mapping",
+    window: "w_bpyinterfaceprocess",
+    status: "ported",
+    notes: "BPYFILE ⋈ ACCTENT (DTLTYPE/INCKNO) → CURRLEDGE; archive BPYFILEX",
+  },
+  {
     id: "brs-upload",
     menuId: "m_brsupload",
     title: "BRS Upload",

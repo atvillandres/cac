@@ -176,7 +176,7 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   let ssiFiles = 0;
   for (const file of input.inbound) {
     if (file.kind === "BRS") {
-      store.bpyFile = file.rows ? [...file.rows] : [{ importedFrom: file.path }];
+      store.bpyFile = file.rows ? (file.rows as unknown as import("./store.js").BpyFileRow[]) : [];
       store.bdoApMst.push({
         company: "ALAI",
         bdoCode: "BRS",
@@ -189,7 +189,8 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
       brsFiles++;
       logs.push({
         step: "brs",
-        detail: `${file.path} → BPYFILE → w_bpyinterfaceprocess`,
+        detail: `${file.path} → BPYFILE → w_bpyinterfaceprocess` +
+          (store.bpyFile.length ? ` (${store.bpyFile.length} rows)` : " (empty — run daily bpy after load)"),
         ok: true,
       });
     } else if (file.kind === "SSI") {
