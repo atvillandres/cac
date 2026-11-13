@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload
+ *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -29,7 +29,10 @@ import { runCdrMapping } from "./process/cdr.js";
 import { demoCdrInput, demoFocusInput } from "./process/fixtures.js";
 import { runGlWalkerAllCompanies } from "./process/glwalker.js";
 import { runLspUpload, seedDemoLspLedger } from "./process/lspupload.js";
+import { buildDemoAliContent, runBrsUpload } from "./process/brs.js";
 import type { AppContext, Variant } from "./types.js";
+import { mkdirSync, writeFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(HERE, "..");
@@ -37,7 +40,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload> [daily-options]
+  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -51,7 +54,7 @@ Login options:
 Daily options:
   --user <id>             Operator user id (default: DEMO)
   --seed-ledger           Seed demo CURRLEDGE rows before run/endofday
-  --inbound <path>        Inbound BPY/GRP DBF path (repeatable)
+  --inbound <path>        Inbound BPY/GRP DBF or BRS .ALI file/dir (repeatable)
   --message-subject <s>   Synthetic mail subject (with --message-file)
   --message-file <path>   Synthetic mail attachment path
   --no-glwalker           End-of-day refuses unless GL Walker confirmed
@@ -347,8 +350,43 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
+  if (opts.cmd === "brs") {
+    const store = createStore();
+    const files: string[] = [];
+    let inboundDir: string | undefined;
+    for (const p of opts.inbound) {
+      try {
+        const st = statSync(p);
+        if (st.isDirectory()) inboundDir = p;
+        else files.push(p);
+      } catch {
+        files.push(p);
+      }
+    }
+    if (files.length === 0 && !inboundDir) {
+      inboundDir = resolve(PKG_ROOT, "out/bis");
+      mkdirSync(inboundDir, { recursive: true });
+      const demo = join(inboundDir, "26k13FO1.ALI");
+      writeFileSync(demo, buildDemoAliContent({ amount: 100, processYmd: "20261113" }), "latin1");
+      console.log(`(seeded demo ${demo})`);
+    }
+    const result = runBrsUpload(store, {
+      userId: opts.userId,
+      files: files.length > 0 ? files : undefined,
+      inboundDir,
+    });
+    console.log(`${result.ok ? "OK" : "!!"} ${result.detail}`);
+    for (const f of result.files) {
+      console.log(`  ${f.ok ? "OK" : "!!"} ${f.filename}: ${f.detail}${f.batchFile ? ` [${f.batchFile}]` : ""}`);
+    }
+    console.log(
+      `currledge=+${result.currLedgeAdded} brsfilex=+${result.brsFileXAdded} bdoapmst=${store.bdoApMst.length}`,
+    );
+    return;
+  }
+
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs)`,
   );
 }
 
