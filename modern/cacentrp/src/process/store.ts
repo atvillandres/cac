@@ -2,15 +2,10 @@
  * In-memory stand-in for CAC working tables used by daily process.
  * Replace with real SQL adapters when ODBC/Postgres is wired.
  */
+import type { CurrLedgeRow } from "./currledge.js";
+import { emptyCurrLedge } from "./currledge.js";
 
-export interface CurrLedgeRow {
-  id: string;
-  foCode: string;
-  docNo: string;
-  amount: number;
-  tranDate: string; // YYYY-MM-DD
-  source: string;
-}
+export type { CurrLedgeRow } from "./currledge.js";
 
 export interface BdoApMstRow {
   company: string;
@@ -22,12 +17,42 @@ export interface BdoApMstRow {
   userId: string;
 }
 
+export interface CashBalanceRow {
+  company: string;
+  foCode: string;
+  cashBal: number;
+  tranDate: string;
+  currency: string;
+}
+
+export interface ApTransStoreRow {
+  docNum: string;
+  docDate: string;
+  acctType: string;
+  amount: number;
+  payType?: string;
+  status?: string;
+}
+
+export interface ApDepositStoreRow {
+  bankAcct: string;
+  tranDate: string;
+  amount: number;
+  status?: string;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: Record<string, unknown>[];
   grpFile: Record<string, unknown>[];
+  cashBalance: CashBalanceRow[];
+  cashBalanceX: CashBalanceRow[];
+  apTrans: ApTransStoreRow[];
+  apTransX: ApTransStoreRow[];
+  apDeposits: ApDepositStoreRow[];
+  apDepositX: ApDepositStoreRow[];
 }
 
 export function createStore(seed?: Partial<DailyStore>): DailyStore {
@@ -37,19 +62,28 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     grpFile: seed?.grpFile ? [...seed.grpFile] : [],
+    cashBalance: seed?.cashBalance ? [...seed.cashBalance] : [],
+    cashBalanceX: seed?.cashBalanceX ? [...seed.cashBalanceX] : [],
+    apTrans: seed?.apTrans ? [...seed.apTrans] : [],
+    apTransX: seed?.apTransX ? [...seed.apTransX] : [],
+    apDeposits: seed?.apDeposits ? [...seed.apDeposits] : [],
+    apDepositX: seed?.apDepositX ? [...seed.apDepositX] : [],
   };
 }
 
 export function seedDemoLedger(store: DailyStore, count = 3): void {
   const today = new Date().toISOString().slice(0, 10);
   for (let i = 1; i <= count; i++) {
-    store.currLedge.push({
-      id: `DEMO-${i}`,
-      foCode: "001",
-      docNo: `OR${String(i).padStart(6, "0")}`,
-      amount: 1000 * i,
-      tranDate: today,
-      source: "DEMO",
-    });
+    const row = emptyCurrLedge();
+    row.coCode = "ALAI";
+    row.foCode = "001";
+    row.refNo = `OR${String(i).padStart(6, "0")}`;
+    row.refDate = today;
+    row.sourceType = "DEMO";
+    row.acctCode = "100001";
+    row.drCr = i % 2 === 0 ? "CR" : "DR";
+    row.amount = 1000 * i;
+    row.userId = "DEMO";
+    store.currLedge.push(row);
   }
 }

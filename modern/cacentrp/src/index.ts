@@ -24,6 +24,9 @@ import {
 import { createStore, seedDemoLedger } from "./process/store.js";
 import { runEndOfDay } from "./process/endofday.js";
 import { runUnload, detectInboundKind } from "./process/unload.js";
+import { runFocusMapping } from "./process/focus.js";
+import { runCdrMapping } from "./process/cdr.js";
+import { demoCdrInput, demoFocusInput } from "./process/fixtures.js";
 import type { AppContext, Variant } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -32,7 +35,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday> [daily-options]
+  cacentrp daily <list|inspect|run|endofday|focus|cdr> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -268,7 +271,50 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
-  throw new Error(`Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday)`);
+  if (opts.cmd === "focus") {
+    const store = createStore();
+    store.bdoApMst.push({
+      company: "ALAI",
+      bdoCode: "001",
+      source: "1",
+      processDate: new Date().toISOString().slice(0, 10),
+      status: "Y",
+      subFile: "0806XXX",
+      userId: opts.userId,
+    });
+    const result = runFocusMapping(store, demoFocusInput(opts.userId));
+    for (const s of result.stages) {
+      console.log(`${s.ok ? "OK" : "!!"} [${s.stage}] ${s.detail}`);
+    }
+    console.log(`batch=${result.batchFile} currledge=${store.currLedge.length} ok=${result.ok}`);
+    return;
+  }
+
+  if (opts.cmd === "cdr") {
+    const store = createStore();
+    const input = demoCdrInput(opts.userId);
+    store.apTrans = (input.apTrans ?? []).map((t) => ({ ...t }));
+    store.apDeposits = (input.apDeposits ?? []).map((d) => ({ ...d }));
+    store.bdoApMst.push({
+      company: "AP",
+      bdoCode: "080",
+      source: "2",
+      processDate: new Date().toISOString().slice(0, 10),
+      status: "Y",
+      subFile: "0806YYY",
+      userId: opts.userId,
+    });
+    const result = runCdrMapping(store, input);
+    console.log(`${result.ok ? "OK" : "!!"} ${result.detail}`);
+    console.log(
+      `batch=${result.batchFile} currledge=${store.currLedge.length} DR=${result.totals.debit} CR=${result.totals.credit}`,
+    );
+    return;
+  }
+
+  throw new Error(
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr)`,
+  );
 }
 
 async function main() {
