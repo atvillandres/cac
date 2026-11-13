@@ -41,6 +41,73 @@ export interface ApDepositStoreRow {
   status?: string;
 }
 
+/** Port of INTINPFL row written by w_lspupload. */
+export interface IntInpFlRow {
+  icomp: string;
+  icdrcd: string;
+  ipolno: string;
+  inpln: string;
+  inpfn: string;
+  inpmi: string;
+  inpact: string;
+  inpopt: string;
+  iactcd: number;
+  inpsgn: string;
+  inpamt: number;
+  iornum: string;
+  iordtc: number;
+  iordty: number;
+  iordtm: number;
+  iordtd: number;
+  inpsrc: string;
+  inpent: string;
+  inpstp: string;
+  iagtcd: string;
+  incvno: string;
+  inckno: string;
+  inprdt: string;
+  iclrdt: string;
+}
+
+/** Port of GLWDTL / d_glwlspdtl — decimal amounts (pre fixed-width). */
+export interface GlwDtlStoreRow {
+  gwrect?: string;
+  gwctle: string;
+  gwgrpn: string;
+  gwgrpd: string | number;
+  gwjrnn: string;
+  gwjrnd: string | number;
+  gwseqn?: number;
+  gwfil1?: string;
+  gwcmpy: string;
+  gwactc: string;
+  gwcurr?: string;
+  gwcntr?: string;
+  gwlobc?: string;
+  gwdccd: string;
+  gwoamt: number;
+  gwlamt: number;
+  gwtrnc?: string;
+  gwref1?: string;
+  gwref2?: string;
+  gwref3?: string;
+  gwref4?: string;
+  gwencs?: string;
+  gwrtts?: string;
+  gwstaa?: number;
+  gwstav?: string;
+  gwadbs?: string;
+  gwdocr?: string;
+  gwrevd?: number;
+  gwreva?: string;
+  gwreve?: string;
+  gwrtty?: string;
+  gwxchr?: number;
+  gwrted?: number;
+  gwsacc?: string;
+  gwfil2?: string;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
@@ -53,6 +120,8 @@ export interface DailyStore {
   apTransX: ApTransStoreRow[];
   apDeposits: ApDepositStoreRow[];
   apDepositX: ApDepositStoreRow[];
+  intInpFl: IntInpFlRow[];
+  glwDtl: GlwDtlStoreRow[];
 }
 
 export function createStore(seed?: Partial<DailyStore>): DailyStore {
@@ -68,6 +137,8 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     apTransX: seed?.apTransX ? [...seed.apTransX] : [],
     apDeposits: seed?.apDeposits ? [...seed.apDeposits] : [],
     apDepositX: seed?.apDepositX ? [...seed.apDepositX] : [],
+    intInpFl: seed?.intInpFl ? [...seed.intInpFl] : [],
+    glwDtl: seed?.glwDtl ? [...seed.glwDtl] : [],
   };
 }
 

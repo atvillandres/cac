@@ -52,8 +52,9 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - End-of-day against in-memory ledger store
 - Unload orchestrator skeleton (mail / FOCUS / CDR / BRS / SSI) with mock adapters
 - FOCUS / CDR → `CURRLEDGE` mapping
-- GL Walker NLSP → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
+- GL Walker NLSP + LSP `GLWDTL` → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
+- LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
 - TRANEXT schemas JSON from sample DBFs
 - Object inventory (166 source objects)
 
-Next slice: `w_lspupload` / LSP `GLWDTL` merge into GL Walker.
+Next slice: `w_brsinterfaceprocess` (BRS upload), then deepen unload.

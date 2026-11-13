@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker
+ *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -28,6 +28,7 @@ import { runFocusMapping } from "./process/focus.js";
 import { runCdrMapping } from "./process/cdr.js";
 import { demoCdrInput, demoFocusInput } from "./process/fixtures.js";
 import { runGlWalkerAllCompanies } from "./process/glwalker.js";
+import { runLspUpload, seedDemoLspLedger } from "./process/lspupload.js";
 import type { AppContext, Variant } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -36,7 +37,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker> [daily-options]
+  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -55,7 +56,7 @@ Daily options:
   --message-file <path>   Synthetic mail attachment path
   --no-glwalker           End-of-day refuses unless GL Walker confirmed
   --no-archive            End-of-day cancel confirm
-  --out <dir>             Output directory for glwalker .GLW files
+  --out <dir>             Output directory for glwalker .GLW / lspupload .lsp trees
 `);
   process.exit(0);
 }
@@ -96,7 +97,7 @@ function parseDailyArgs(argv: string[]) {
     messageFiles: string[];
     glWalkerDone: boolean;
     confirmArchive: boolean;
-    outDir: string;
+    outDir?: string;
   } = {
     cmd,
     userId: "DEMO",
@@ -105,7 +106,6 @@ function parseDailyArgs(argv: string[]) {
     messageFiles: [],
     glWalkerDone: true,
     confirmArchive: true,
-    outDir: resolve(PKG_ROOT, "out/glwalker"),
   };
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
@@ -117,7 +117,7 @@ function parseDailyArgs(argv: string[]) {
     else if (a === "--message-file") opts.messageFiles.push(argv[++i]!);
     else if (a === "--no-glwalker") opts.glWalkerDone = false;
     else if (a === "--no-archive") opts.confirmArchive = false;
-    else if (a === "--out") opts.outDir = resolve(argv[++i] ?? opts.outDir);
+    else if (a === "--out") opts.outDir = resolve(argv[++i]!);
     else throw new Error(`Unknown daily argument: ${a}`);
   }
   return opts;
@@ -320,15 +320,35 @@ function runDailyCommand(argv: string[]) {
   if (opts.cmd === "glwalker") {
     const store = createStore();
     seedDemoLedger(store);
-    const results = runGlWalkerAllCompanies(store.currLedge, opts.outDir);
+    const outDir = opts.outDir ?? resolve(PKG_ROOT, "out/glwalker");
+    const results = runGlWalkerAllCompanies(store.currLedge, outDir, {
+      glwDtl: store.glwDtl,
+    });
     for (const r of results) {
       console.log(`${r.ok ? "OK" : "!!"} [${r.company}] ${r.detail}${r.path ? ` (${r.path})` : ""}`);
     }
     return;
   }
 
+  if (opts.cmd === "lspupload") {
+    const store = createStore();
+    seedDemoLspLedger(store);
+    const outDir = opts.outDir ?? resolve(PKG_ROOT, "out/lsp");
+    const result = runLspUpload(store, {
+      userId: opts.userId,
+      outDir,
+    });
+    console.log(`${result.ok ? "OK" : "!!"} ${result.detail}`);
+    for (const f of result.files) {
+      if (f.lineCount > 0) {
+        console.log(`  ${f.company} ${f.filename} lines=${f.lineCount}${f.path ? ` (${f.path})` : ""}`);
+      }
+    }
+    return;
+  }
+
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload)`,
   );
 }
 
