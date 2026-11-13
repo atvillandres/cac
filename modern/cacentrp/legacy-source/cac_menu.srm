@@ -1,0 +1,1133 @@
+forward
+global type cac_menu from menu
+end type
+type m_dailyprocessing from menu within cac_menu
+end type
+type m_rundaily from menu within m_dailyprocessing
+end type
+type m_miscfilesprocess from menu within m_rundaily
+end type
+type m_autoemaildetach from menu within m_rundaily
+end type
+type m_manualloading from menu within m_rundaily
+end type
+type m_brsupload from menu within m_rundaily
+end type
+type m_rundaily from menu within m_dailyprocessing
+m_miscfilesprocess m_miscfilesprocess
+m_autoemaildetach m_autoemaildetach
+m_manualloading m_manualloading
+m_brsupload m_brsupload
+end type
+type m_createlspupload from menu within m_dailyprocessing
+end type
+type m_createglwfile from menu within m_dailyprocessing
+end type
+type m_endofdayprocessing from menu within m_dailyprocessing
+end type
+type m_dailyprocessing from menu within cac_menu
+m_rundaily m_rundaily
+m_createlspupload m_createlspupload
+m_createglwfile m_createglwfile
+m_endofdayprocessing m_endofdayprocessing
+end type
+type m_reports from menu within cac_menu
+end type
+type m_priorlsptb from menu within m_reports
+end type
+type m_foexcesscash from menu within m_reports
+end type
+type m_miscreports from menu within m_reports
+end type
+type m_disbursementreport from menu within m_reports
+end type
+type m_agentwtpfsl from menu within m_reports
+end type
+type m_alphalistwtaxgroup from menu within m_reports
+end type
+type m_bpirm2xtract from menu within m_reports
+end type
+type m_checkdisbxtract from menu within m_reports
+end type
+type m_submission2bdo from menu within m_reports
+end type
+type m_cashbalancereport from menu within m_reports
+end type
+type m_processstat from menu within m_reports
+end type
+type m_detailederrorlist from menu within m_reports
+end type
+type m_special from menu within m_reports
+end type
+type m_alaitablist from menu within m_reports
+end type
+type m_ahciun_mmddorffile from menu within m_reports
+end type
+type m_reports from menu within cac_menu
+m_priorlsptb m_priorlsptb
+m_foexcesscash m_foexcesscash
+m_miscreports m_miscreports
+m_disbursementreport m_disbursementreport
+m_agentwtpfsl m_agentwtpfsl
+m_alphalistwtaxgroup m_alphalistwtaxgroup
+m_bpirm2xtract m_bpirm2xtract
+m_checkdisbxtract m_checkdisbxtract
+m_submission2bdo m_submission2bdo
+m_cashbalancereport m_cashbalancereport
+m_processstat m_processstat
+m_detailederrorlist m_detailederrorlist
+m_special m_special
+m_alaitablist m_alaitablist
+m_ahciun_mmddorffile m_ahciun_mmddorffile
+end type
+type m_administration from menu within cac_menu
+end type
+type m_referencefilemaint from menu within m_administration
+end type
+type m_transactionmappingtable from menu within m_referencefilemaint
+end type
+type m_new from menu within m_transactionmappingtable
+end type
+type m_open from menu within m_transactionmappingtable
+end type
+type m_transactionmappingtable from menu within m_referencefilemaint
+m_new m_new
+m_open m_open
+end type
+type m_systemreferencetables from menu within m_referencefilemaint
+end type
+type m_referencefilemaint from menu within m_administration
+m_transactionmappingtable m_transactionmappingtable
+m_systemreferencetables m_systemreferencetables
+end type
+type m_usermaintenance from menu within m_administration
+end type
+type m_audittrail from menu within m_administration
+end type
+type m_printsystemlog from menu within m_audittrail
+end type
+type m_printmaintenancelog from menu within m_audittrail
+end type
+type m_audittrail from menu within m_administration
+m_printsystemlog m_printsystemlog
+m_printmaintenancelog m_printmaintenancelog
+end type
+type m_resubmitfile from menu within m_administration
+end type
+type m_3 from menu within m_administration
+end type
+type m_dailycdrfileconversion from menu within m_administration
+end type
+type m_oldbrsfileconversion from menu within m_administration
+end type
+type m_fcsrefreshreffiles from menu within m_administration
+end type
+type m_refreshreffiles from menu within m_fcsrefreshreffiles
+end type
+type m_backupnclear from menu within m_fcsrefreshreffiles
+end type
+type m_fcsrefreshreffiles from menu within m_administration
+m_refreshreffiles m_refreshreffiles
+m_backupnclear m_backupnclear
+end type
+type m_administration from menu within cac_menu
+m_referencefilemaint m_referencefilemaint
+m_usermaintenance m_usermaintenance
+m_audittrail m_audittrail
+m_resubmitfile m_resubmitfile
+m_3 m_3
+m_dailycdrfileconversion m_dailycdrfileconversion
+m_oldbrsfileconversion m_oldbrsfileconversion
+m_fcsrefreshreffiles m_fcsrefreshreffiles
+end type
+type m_window from menu within cac_menu
+end type
+type m_vertical from menu within m_window
+end type
+type m_horizontal from menu within m_window
+end type
+type m_layer from menu within m_window
+end type
+type m_cascade from menu within m_window
+end type
+type m_window from menu within cac_menu
+m_vertical m_vertical
+m_horizontal m_horizontal
+m_layer m_layer
+m_cascade m_cascade
+end type
+type m_help from menu within cac_menu
+end type
+type m_exit from menu within cac_menu
+end type
+global type cac_menu from menu
+m_dailyprocessing m_dailyprocessing
+m_reports m_reports
+m_administration m_administration
+m_window m_window
+m_help m_help
+m_exit m_exit
+end type
+end forward
+
+global type cac_menu from menu
+m_dailyprocessing m_dailyprocessing
+m_reports m_reports
+m_administration m_administration
+m_window m_window
+m_help m_help
+m_exit m_exit
+end type
+global cac_menu cac_menu
+
+on cac_menu.create
+cac_menu=this
+call super::create
+this.m_dailyprocessing=create m_dailyprocessing
+this.m_reports=create m_reports
+this.m_administration=create m_administration
+this.m_window=create m_window
+this.m_help=create m_help
+this.m_exit=create m_exit
+this.Item[UpperBound(this.Item)+1]=this.m_dailyprocessing
+this.Item[UpperBound(this.Item)+1]=this.m_reports
+this.Item[UpperBound(this.Item)+1]=this.m_administration
+this.Item[UpperBound(this.Item)+1]=this.m_window
+this.Item[UpperBound(this.Item)+1]=this.m_help
+this.Item[UpperBound(this.Item)+1]=this.m_exit
+end on
+
+on cac_menu.destroy
+call super::destroy
+destroy(this.m_dailyprocessing)
+destroy(this.m_reports)
+destroy(this.m_administration)
+destroy(this.m_window)
+destroy(this.m_help)
+destroy(this.m_exit)
+end on
+
+event clicked;close(w_cac_frame)
+end event
+
+type m_dailyprocessing from menu within cac_menu
+m_rundaily m_rundaily
+m_createlspupload m_createlspupload
+m_createglwfile m_createglwfile
+m_endofdayprocessing m_endofdayprocessing
+end type
+
+on m_dailyprocessing.create
+call super::create
+this.text = "&Daily Processing"
+this.mergeoption = windowmenu!
+this.m_rundaily=create m_rundaily
+this.m_createlspupload=create m_createlspupload
+this.m_createglwfile=create m_createglwfile
+this.m_endofdayprocessing=create m_endofdayprocessing
+this.Item[UpperBound(this.Item)+1]=this.m_rundaily
+this.Item[UpperBound(this.Item)+1]=this.m_createlspupload
+this.Item[UpperBound(this.Item)+1]=this.m_createglwfile
+this.Item[UpperBound(this.Item)+1]=this.m_endofdayprocessing
+end on
+
+on m_dailyprocessing.destroy
+call super::destroy
+destroy(this.m_rundaily)
+destroy(this.m_createlspupload)
+destroy(this.m_createglwfile)
+destroy(this.m_endofdayprocessing)
+end on
+
+event clicked;IF NOT f_getcurrbkrate() THEN
+	RETURN
+END IF
+
+//gdec_bkrate = 53.75
+end event
+
+type m_rundaily from menu within m_dailyprocessing
+m_miscfilesprocess m_miscfilesprocess
+m_autoemaildetach m_autoemaildetach
+m_manualloading m_manualloading
+m_brsupload m_brsupload
+end type
+
+on m_rundaily.create
+call super::create
+this.text = "Run Daily Process"
+this.m_miscfilesprocess=create m_miscfilesprocess
+this.m_autoemaildetach=create m_autoemaildetach
+this.m_manualloading=create m_manualloading
+this.m_brsupload=create m_brsupload
+this.Item[UpperBound(this.Item)+1]=this.m_miscfilesprocess
+this.Item[UpperBound(this.Item)+1]=this.m_autoemaildetach
+this.Item[UpperBound(this.Item)+1]=this.m_manualloading
+this.Item[UpperBound(this.Item)+1]=this.m_brsupload
+end on
+
+on m_rundaily.destroy
+call super::destroy
+destroy(this.m_miscfilesprocess)
+destroy(this.m_autoemaildetach)
+destroy(this.m_manualloading)
+destroy(this.m_brsupload)
+end on
+
+type m_miscfilesprocess from menu within m_rundaily
+end type
+
+event clicked;string ls_run
+
+ls_run = "command.com /c C:\HOTCI\HOTCI.EXE"
+
+RUN( ls_run, Normal! )
+end event
+
+on m_miscfilesprocess.create
+call super::create
+this.text = "Misc. &Files Process"
+end on
+
+on m_miscfilesprocess.destroy
+call super::destroy
+end on
+
+type m_autoemaildetach from menu within m_rundaily
+event clicked ( )
+end type
+
+event clicked;opensheet(w_unload, w_cac_frame,4,Original!)
+end event
+
+on m_autoemaildetach.create
+call super::create
+this.text = "&Auto Email Detach"
+end on
+
+on m_autoemaildetach.destroy
+call super::destroy
+end on
+
+type m_manualloading from menu within m_rundaily
+event clicked ( )
+end type
+
+event clicked;opensheet(w_user_unload, w_cac_frame, 0, Original!)
+end event
+
+on m_manualloading.create
+call super::create
+this.text = "&Manual Loading"
+end on
+
+on m_manualloading.destroy
+call super::destroy
+end on
+
+type m_brsupload from menu within m_rundaily
+event clicked ( )
+end type
+
+event clicked;opensheetwithparm(w_brsinterfaceprocess, '',w_cac_frame, 0, Original!)
+end event
+
+on m_brsupload.create
+call super::create
+this.text = "BRS &Upload"
+end on
+
+on m_brsupload.destroy
+call super::destroy
+end on
+
+type m_createlspupload from menu within m_dailyprocessing
+event clicked ( )
+end type
+
+event clicked;open(w_lspupload)
+end event
+
+on m_createlspupload.create
+call super::create
+this.text = "L&oad LSP records to LSP"
+end on
+
+on m_createlspupload.destroy
+call super::destroy
+end on
+
+type m_createglwfile from menu within m_dailyprocessing
+event clicked ( )
+end type
+
+event clicked;OpenSheet(w_glwalker, w_cac_frame, 4, Original!)
+end event
+
+on m_createglwfile.create
+call super::create
+this.text = "&Merge LSP and Non-LSP/Create GLW File"
+end on
+
+on m_createglwfile.destroy
+call super::destroy
+end on
+
+type m_endofdayprocessing from menu within m_dailyprocessing
+event clicked ( )
+end type
+
+event clicked;OpenSheet(w_endofday, w_cac_frame, 4, Original!)
+end event
+
+on m_endofdayprocessing.create
+call super::create
+this.text = "&End of Day Processing"
+end on
+
+on m_endofdayprocessing.destroy
+call super::destroy
+end on
+
+type m_reports from menu within cac_menu
+m_priorlsptb m_priorlsptb
+m_foexcesscash m_foexcesscash
+m_miscreports m_miscreports
+m_disbursementreport m_disbursementreport
+m_agentwtpfsl m_agentwtpfsl
+m_alphalistwtaxgroup m_alphalistwtaxgroup
+m_bpirm2xtract m_bpirm2xtract
+m_checkdisbxtract m_checkdisbxtract
+m_submission2bdo m_submission2bdo
+m_cashbalancereport m_cashbalancereport
+m_processstat m_processstat
+m_detailederrorlist m_detailederrorlist
+m_special m_special
+m_alaitablist m_alaitablist
+m_ahciun_mmddorffile m_ahciun_mmddorffile
+end type
+
+on m_reports.create
+call super::create
+this.text = "&Reports"
+this.m_priorlsptb=create m_priorlsptb
+this.m_foexcesscash=create m_foexcesscash
+this.m_miscreports=create m_miscreports
+this.m_disbursementreport=create m_disbursementreport
+this.m_agentwtpfsl=create m_agentwtpfsl
+this.m_alphalistwtaxgroup=create m_alphalistwtaxgroup
+this.m_bpirm2xtract=create m_bpirm2xtract
+this.m_checkdisbxtract=create m_checkdisbxtract
+this.m_submission2bdo=create m_submission2bdo
+this.m_cashbalancereport=create m_cashbalancereport
+this.m_processstat=create m_processstat
+this.m_detailederrorlist=create m_detailederrorlist
+this.m_special=create m_special
+this.m_alaitablist=create m_alaitablist
+this.m_ahciun_mmddorffile=create m_ahciun_mmddorffile
+this.Item[UpperBound(this.Item)+1]=this.m_priorlsptb
+this.Item[UpperBound(this.Item)+1]=this.m_foexcesscash
+this.Item[UpperBound(this.Item)+1]=this.m_miscreports
+this.Item[UpperBound(this.Item)+1]=this.m_disbursementreport
+this.Item[UpperBound(this.Item)+1]=this.m_agentwtpfsl
+this.Item[UpperBound(this.Item)+1]=this.m_alphalistwtaxgroup
+this.Item[UpperBound(this.Item)+1]=this.m_bpirm2xtract
+this.Item[UpperBound(this.Item)+1]=this.m_checkdisbxtract
+this.Item[UpperBound(this.Item)+1]=this.m_submission2bdo
+this.Item[UpperBound(this.Item)+1]=this.m_cashbalancereport
+this.Item[UpperBound(this.Item)+1]=this.m_processstat
+this.Item[UpperBound(this.Item)+1]=this.m_detailederrorlist
+this.Item[UpperBound(this.Item)+1]=this.m_special
+this.Item[UpperBound(this.Item)+1]=this.m_alaitablist
+this.Item[UpperBound(this.Item)+1]=this.m_ahciun_mmddorffile
+end on
+
+on m_reports.destroy
+call super::destroy
+destroy(this.m_priorlsptb)
+destroy(this.m_foexcesscash)
+destroy(this.m_miscreports)
+destroy(this.m_disbursementreport)
+destroy(this.m_agentwtpfsl)
+destroy(this.m_alphalistwtaxgroup)
+destroy(this.m_bpirm2xtract)
+destroy(this.m_checkdisbxtract)
+destroy(this.m_submission2bdo)
+destroy(this.m_cashbalancereport)
+destroy(this.m_processstat)
+destroy(this.m_detailederrorlist)
+destroy(this.m_special)
+destroy(this.m_alaitablist)
+destroy(this.m_ahciun_mmddorffile)
+end on
+
+type m_priorlsptb from menu within m_reports
+event clicked ( )
+end type
+
+event clicked;IF NOT f_getcurrbkrate() THEN
+	RETURN
+END IF
+
+opensheetwithparm(w_trialbalance4lsp, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_priorlsptb.create
+call super::create
+this.text = "&Prior LSP Account Summary"
+end on
+
+on m_priorlsptb.destroy
+call super::destroy
+end on
+
+type m_foexcesscash from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_foexcesscash, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_foexcesscash.create
+call super::create
+this.text = "&F.O. Excess Cash"
+end on
+
+on m_foexcesscash.destroy
+call super::destroy
+end on
+
+type m_miscreports from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_miscreport, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_miscreports.create
+call super::create
+this.text = "&Misc. Reports"
+end on
+
+on m_miscreports.destroy
+call super::destroy
+end on
+
+type m_disbursementreport from menu within m_reports
+event clicked ( )
+end type
+
+event clicked;opensheetwithparm(w_disbursement, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_disbursementreport.create
+call super::create
+this.text = "Disbursement Report"
+end on
+
+on m_disbursementreport.destroy
+call super::destroy
+end on
+
+type m_agentwtpfsl from menu within m_reports
+end type
+
+on m_agentwtpfsl.create
+call super::create
+this.text = "E&xtract Agent~'s WTax && P. Fund SL"
+end on
+
+on m_agentwtpfsl.destroy
+call super::destroy
+end on
+
+event clicked;Open ( w_agtwtpfsl )
+end event
+
+type m_alphalistwtaxgroup from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_alphawtax, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_alphalistwtaxgroup.create
+call super::create
+this.text = "&Alphalist W/Tax (Group)"
+end on
+
+on m_alphalistwtaxgroup.destroy
+call super::destroy
+end on
+
+type m_bpirm2xtract from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_bpirm2xtr, '',w_cac_frame, 0, Original!)
+
+end event
+
+on m_bpirm2xtract.create
+call super::create
+this.text = "&BPI RM2 File Extract"
+end on
+
+on m_bpirm2xtract.destroy
+call super::destroy
+end on
+
+type m_checkdisbxtract from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_disbursement_11009549, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_checkdisbxtract.create
+call super::create
+this.text = "&Check Disbursement Extract (Dionnie)"
+end on
+
+on m_checkdisbxtract.destroy
+call super::destroy
+end on
+
+type m_submission2bdo from menu within m_reports
+end type
+
+event clicked;OpenSheet(w_manual_send, w_cac_frame, 4, Layered!)
+end event
+
+on m_submission2bdo.create
+call super::create
+this.text = "&Submission Report To BDO"
+end on
+
+on m_submission2bdo.destroy
+call super::destroy
+end on
+
+type m_cashbalancereport from menu within m_reports
+event clicked ( )
+end type
+
+event clicked;opensheetwithparm(w_preview,"d_dailycashbalancereport",w_cac_frame)
+end event
+
+on m_cashbalancereport.create
+call super::create
+this.visible = false
+this.text = "Cash Balance Report"
+end on
+
+on m_cashbalancereport.destroy
+call super::destroy
+end on
+
+type m_processstat from menu within m_reports
+end type
+
+event clicked;OpenSheet(w_submission_report, w_cac_frame, 4, Layered!)
+end event
+
+on m_processstat.create
+call super::create
+this.text = "S&ubmission Processing Status"
+end on
+
+on m_processstat.destroy
+call super::destroy
+end on
+
+type m_detailederrorlist from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_detailed_error, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_detailederrorlist.create
+call super::create
+this.text = "&Detailed Error Listing"
+end on
+
+on m_detailederrorlist.destroy
+call super::destroy
+end on
+
+type m_special from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_special, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_special.create
+call super::create
+this.visible = false
+this.text = "Special"
+end on
+
+on m_special.destroy
+call super::destroy
+end on
+
+type m_alaitablist from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_dis_tablist, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_alaitablist.create
+call super::create
+this.text = "ALAI &Tablist"
+end on
+
+on m_alaitablist.destroy
+call super::destroy
+end on
+
+type m_ahciun_mmddorffile from menu within m_reports
+end type
+
+event clicked;opensheetwithparm(w_ahci_orf_extract, '',w_cac_frame, 0, Layered!)
+end event
+
+on m_ahciun_mmddorffile.create
+call super::create
+this.text = "AHCI Un_mmdd.orf file extract"
+end on
+
+on m_ahciun_mmddorffile.destroy
+call super::destroy
+end on
+
+type m_administration from menu within cac_menu
+m_referencefilemaint m_referencefilemaint
+m_usermaintenance m_usermaintenance
+m_audittrail m_audittrail
+m_resubmitfile m_resubmitfile
+m_3 m_3
+m_dailycdrfileconversion m_dailycdrfileconversion
+m_oldbrsfileconversion m_oldbrsfileconversion
+m_fcsrefreshreffiles m_fcsrefreshreffiles
+end type
+
+on m_administration.create
+call super::create
+this.text = "&Tools"
+this.m_referencefilemaint=create m_referencefilemaint
+this.m_usermaintenance=create m_usermaintenance
+this.m_audittrail=create m_audittrail
+this.m_resubmitfile=create m_resubmitfile
+this.m_3=create m_3
+this.m_dailycdrfileconversion=create m_dailycdrfileconversion
+this.m_oldbrsfileconversion=create m_oldbrsfileconversion
+this.m_fcsrefreshreffiles=create m_fcsrefreshreffiles
+this.Item[UpperBound(this.Item)+1]=this.m_referencefilemaint
+this.Item[UpperBound(this.Item)+1]=this.m_usermaintenance
+this.Item[UpperBound(this.Item)+1]=this.m_audittrail
+this.Item[UpperBound(this.Item)+1]=this.m_resubmitfile
+this.Item[UpperBound(this.Item)+1]=this.m_3
+this.Item[UpperBound(this.Item)+1]=this.m_dailycdrfileconversion
+this.Item[UpperBound(this.Item)+1]=this.m_oldbrsfileconversion
+this.Item[UpperBound(this.Item)+1]=this.m_fcsrefreshreffiles
+end on
+
+on m_administration.destroy
+call super::destroy
+destroy(this.m_referencefilemaint)
+destroy(this.m_usermaintenance)
+destroy(this.m_audittrail)
+destroy(this.m_resubmitfile)
+destroy(this.m_3)
+destroy(this.m_dailycdrfileconversion)
+destroy(this.m_oldbrsfileconversion)
+destroy(this.m_fcsrefreshreffiles)
+end on
+
+type m_referencefilemaint from menu within m_administration
+m_transactionmappingtable m_transactionmappingtable
+m_systemreferencetables m_systemreferencetables
+end type
+
+on m_referencefilemaint.create
+call super::create
+this.text = "Reference File Maintenance"
+this.m_transactionmappingtable=create m_transactionmappingtable
+this.m_systemreferencetables=create m_systemreferencetables
+this.Item[UpperBound(this.Item)+1]=this.m_transactionmappingtable
+this.Item[UpperBound(this.Item)+1]=this.m_systemreferencetables
+end on
+
+on m_referencefilemaint.destroy
+call super::destroy
+destroy(this.m_transactionmappingtable)
+destroy(this.m_systemreferencetables)
+end on
+
+type m_transactionmappingtable from menu within m_referencefilemaint
+m_new m_new
+m_open m_open
+end type
+
+on m_transactionmappingtable.create
+call super::create
+this.text = "Transaction Mapping Table"
+this.m_new=create m_new
+this.m_open=create m_open
+this.Item[UpperBound(this.Item)+1]=this.m_new
+this.Item[UpperBound(this.Item)+1]=this.m_open
+end on
+
+on m_transactionmappingtable.destroy
+call super::destroy
+destroy(this.m_new)
+destroy(this.m_open)
+end on
+
+type m_new from menu within m_transactionmappingtable
+end type
+
+on m_new.create
+call super::create
+this.text = "New"
+end on
+
+on m_new.destroy
+call super::destroy
+end on
+
+event clicked;opensheet(w_cactransmapmaint, w_cac_frame, 0, Layered!)
+end event
+
+type m_open from menu within m_transactionmappingtable
+end type
+
+on m_open.create
+call super::create
+this.text = "Open"
+end on
+
+on m_open.destroy
+call super::destroy
+end on
+
+event clicked;opensheet(w_cactransmapmaint_open, w_cac_frame, 0, Layered!)
+end event
+
+type m_systemreferencetables from menu within m_referencefilemaint
+end type
+
+on m_systemreferencetables.create
+call super::create
+this.text = "System Reference Tables"
+end on
+
+on m_systemreferencetables.destroy
+call super::destroy
+end on
+
+event clicked;Opensheet(w_reference_tables,w_cac_frame,4,Original!)
+
+end event
+
+type m_usermaintenance from menu within m_administration
+end type
+
+on m_usermaintenance.create
+call super::create
+this.text = "User Maintenance"
+end on
+
+on m_usermaintenance.destroy
+call super::destroy
+end on
+
+event clicked;IF NOT IsValid(w_maintain_users) THEN
+	OpenSheetWithParm(w_maintain_users,'1',w_cac_frame,4,Original!)
+END IF
+end event
+
+type m_audittrail from menu within m_administration
+m_printsystemlog m_printsystemlog
+m_printmaintenancelog m_printmaintenancelog
+end type
+
+on m_audittrail.create
+call super::create
+this.text = "Audit Trail"
+this.m_printsystemlog=create m_printsystemlog
+this.m_printmaintenancelog=create m_printmaintenancelog
+this.Item[UpperBound(this.Item)+1]=this.m_printsystemlog
+this.Item[UpperBound(this.Item)+1]=this.m_printmaintenancelog
+end on
+
+on m_audittrail.destroy
+call super::destroy
+destroy(this.m_printsystemlog)
+destroy(this.m_printmaintenancelog)
+end on
+
+type m_printsystemlog from menu within m_audittrail
+end type
+
+on m_printsystemlog.create
+call super::create
+this.text = "Print System Log"
+end on
+
+on m_printsystemlog.destroy
+call super::destroy
+end on
+
+event clicked;opensheetwithparm(w_printsystemlloguserid, '',w_cac_frame, 0, Original!)
+end event
+
+type m_printmaintenancelog from menu within m_audittrail
+end type
+
+on m_printmaintenancelog.create
+call super::create
+this.text = "Print Maintenance Log"
+end on
+
+on m_printmaintenancelog.destroy
+call super::destroy
+end on
+
+event clicked;opensheetwithparm(w_prt_fml_arg, '',w_cac_frame, 0, Original!)
+
+end event
+
+type m_resubmitfile from menu within m_administration
+end type
+
+event clicked;OpenSheet(w_resubmit, w_cac_frame, 4, Layered!)
+end event
+
+on m_resubmitfile.create
+call super::create
+this.text = "Pre-resubmission Process"
+end on
+
+on m_resubmitfile.destroy
+call super::destroy
+end on
+
+type m_3 from menu within m_administration
+end type
+
+event clicked;//opensheet(w_cdrwkfile_conversion, w_cac_frame, 0, Original!)
+end event
+
+on m_3.create
+call super::create
+this.visible = false
+this.text = "Old CDR File Conversion"
+end on
+
+on m_3.destroy
+call super::destroy
+end on
+
+type m_dailycdrfileconversion from menu within m_administration
+end type
+
+event clicked;//opensheet(w_dailycdr_conversion, w_cac_frame, 0, Original!)
+end event
+
+on m_dailycdrfileconversion.create
+call super::create
+this.visible = false
+this.text = "Daily CDR File Conversion"
+end on
+
+on m_dailycdrfileconversion.destroy
+call super::destroy
+end on
+
+type m_oldbrsfileconversion from menu within m_administration
+end type
+
+event clicked;//opensheet(w_brs_conversion, w_cac_frame, 0, Original!)
+end event
+
+on m_oldbrsfileconversion.create
+call super::create
+this.visible = false
+this.text = "Old BRS File Conversion"
+end on
+
+on m_oldbrsfileconversion.destroy
+call super::destroy
+end on
+
+type m_fcsrefreshreffiles from menu within m_administration
+m_refreshreffiles m_refreshreffiles
+m_backupnclear m_backupnclear
+end type
+
+on m_fcsrefreshreffiles.create
+call super::create
+this.text = "&FOCUS Interface"
+this.m_refreshreffiles=create m_refreshreffiles
+this.m_backupnclear=create m_backupnclear
+this.Item[UpperBound(this.Item)+1]=this.m_refreshreffiles
+this.Item[UpperBound(this.Item)+1]=this.m_backupnclear
+end on
+
+on m_fcsrefreshreffiles.destroy
+call super::destroy
+destroy(this.m_refreshreffiles)
+destroy(this.m_backupnclear)
+end on
+
+type m_refreshreffiles from menu within m_fcsrefreshreffiles
+end type
+
+event clicked;DISCONNECT USING SQLCA_ALMODDATA;
+DISCONNECT USING SQLCA;
+
+Open( w_lextract_frame )
+OPENSHEET(w_cac_logo,w_lextract_frame)
+end event
+
+on m_refreshreffiles.create
+call super::create
+this.text = "&Refresh Ref. Files"
+end on
+
+on m_refreshreffiles.destroy
+call super::destroy
+end on
+
+type m_backupnclear from menu within m_fcsrefreshreffiles
+end type
+
+event clicked;Open( w_lextract_frame )
+OPENSHEET( w_lextract_bak_and_clear, w_lextract_frame )
+
+end event
+
+on m_backupnclear.create
+call super::create
+this.text = "&Backup And Clear Raw Data"
+end on
+
+on m_backupnclear.destroy
+call super::destroy
+end on
+
+type m_window from menu within cac_menu
+m_vertical m_vertical
+m_horizontal m_horizontal
+m_layer m_layer
+m_cascade m_cascade
+end type
+
+on m_window.create
+call super::create
+this.text = "&Window"
+this.m_vertical=create m_vertical
+this.m_horizontal=create m_horizontal
+this.m_layer=create m_layer
+this.m_cascade=create m_cascade
+this.Item[UpperBound(this.Item)+1]=this.m_vertical
+this.Item[UpperBound(this.Item)+1]=this.m_horizontal
+this.Item[UpperBound(this.Item)+1]=this.m_layer
+this.Item[UpperBound(this.Item)+1]=this.m_cascade
+end on
+
+on m_window.destroy
+call super::destroy
+destroy(this.m_vertical)
+destroy(this.m_horizontal)
+destroy(this.m_layer)
+destroy(this.m_cascade)
+end on
+
+type m_vertical from menu within m_window
+end type
+
+on m_vertical.create
+call super::create
+this.text = "&Vertical"
+end on
+
+on m_vertical.destroy
+call super::destroy
+end on
+
+event clicked;w_cac_frame.ArrangeSheets ( tile! )
+end event
+
+type m_horizontal from menu within m_window
+end type
+
+on m_horizontal.create
+call super::create
+this.text = "&Horizontal"
+end on
+
+on m_horizontal.destroy
+call super::destroy
+end on
+
+event clicked;w_cac_frame.ArrangeSheets ( tilehorizontal! )
+end event
+
+type m_layer from menu within m_window
+end type
+
+on m_layer.create
+call super::create
+this.text = "&Layer"
+end on
+
+on m_layer.destroy
+call super::destroy
+end on
+
+event clicked;w_cac_frame.ArrangeSheets ( Layer! )
+end event
+
+type m_cascade from menu within m_window
+end type
+
+on m_cascade.create
+call super::create
+this.text = "&Cascade"
+end on
+
+on m_cascade.destroy
+call super::destroy
+end on
+
+event clicked;w_cac_frame.ArrangeSheets ( cascade! )
+end event
+
+type m_help from menu within cac_menu
+end type
+
+on m_help.create
+call super::create
+this.text = "&Help"
+end on
+
+on m_help.destroy
+call super::destroy
+end on
+
+event clicked;opensheet( w_about, w_cac_frame, 0, Original! ) 
+end event
+
+type m_exit from menu within cac_menu
+end type
+
+on m_exit.create
+call super::create
+this.text = "Exit"
+end on
+
+on m_exit.destroy
+call super::destroy
+end on
+
+event clicked;close(w_cac_frame)
+end event
+
