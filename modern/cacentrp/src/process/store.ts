@@ -122,11 +122,37 @@ export interface GlwDtlStoreRow {
   gwfil2?: string;
 }
 
+/** Port of BPYFILE / BPYFILEX working table (unload → w_bpyinterfaceprocess). */
+export interface BpyFileRow {
+  icdrcd: string;
+  ipolno: string;
+  inpln: string;
+  inpfn: string;
+  inpmi: string;
+  iactType: string;
+  inorType: string;
+  iactcd: string;
+  inpsgn: string;
+  inpamt: string | number;
+  inorno: string;
+  indate: string;
+  inpsrc: string;
+  inpent: string;
+  inpstp: string;
+  iagtcd: string;
+  incvno: string;
+  inckno: string;
+  inprdate: string;
+  dtlType: string;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
+  unbalCurrLedge: CurrLedgeRow[];
   bdoApMst: BdoApMstRow[];
-  bpyFile: Record<string, unknown>[];
+  bpyFile: BpyFileRow[];
+  bpyFileX: BpyFileRow[];
   grpFile: Record<string, unknown>[];
   cashBalance: CashBalanceRow[];
   cashBalanceX: CashBalanceRow[];
@@ -143,8 +169,10 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
   return {
     currLedge: seed?.currLedge ? [...seed.currLedge] : [],
     currLedgeX: seed?.currLedgeX ? [...seed.currLedgeX] : [],
+    unbalCurrLedge: seed?.unbalCurrLedge ? [...seed.unbalCurrLedge] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
+    bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
     grpFile: seed?.grpFile ? [...seed.grpFile] : [],
     cashBalance: seed?.cashBalance ? [...seed.cashBalance] : [],
     cashBalanceX: seed?.cashBalanceX ? [...seed.cashBalanceX] : [],
