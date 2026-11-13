@@ -2,14 +2,17 @@
  *   npx tsx src/process/focus-cdr.test.ts
  */
 import { createStore } from "./store.js";
-import { runFocusMapping } from "./focus.js";
+import { numberSignFor, runFocusMapping, type FocusInput } from "./focus.js";
 import { runCdrMapping } from "./cdr.js";
 import { debitCreditTotals } from "./currledge.js";
-import { demoCdrInput, demoFocusInput } from "./fixtures.js";
+import { demoCdrInput, demoFocusInput, DEMO_ACCTENT, DEMO_PARAMS } from "./fixtures.js";
 
 function check(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
 }
+
+const STAGE_ORDER =
+  "collection,collPdr,disbursement,fundTransfer,deposit,balance,complete";
 
 // FOCUS happy path
 {
@@ -26,14 +29,14 @@ function check(cond: boolean, msg: string): void {
   const result = runFocusMapping(store, demoFocusInput());
   check(result.ok, `focus failed: ${result.stages.map((s) => s.detail).join("; ")}`);
   check(result.batchFile === "Success.bat", "expected Success.bat");
-  check(result.stages.map((s) => s.stage).join(",") === "collection,disbursement,deposit,balance,complete", "stage order");
+  check(result.stages.map((s) => s.stage).join(",") === STAGE_ORDER, "stage order");
   const totals = debitCreditTotals(result.mapFocus);
   check(totals.debit === totals.credit, `FOCUS imbalance DR=${totals.debit} CR=${totals.credit}`);
   check(store.currLedge.length === result.mapFocus.length, "currledge not persisted");
   check(store.bdoApMst[0].status === "L", "BDOAPMST should be L");
 }
 
-// FOCUS missing param
+// FOCUS missing param 101
 {
   const store = createStore();
   const input = demoFocusInput();
@@ -41,6 +44,164 @@ function check(cond: boolean, msg: string): void {
   const result = runFocusMapping(store, input);
   check(!result.ok, "should fail without param 101");
   check(result.batchFile === "Error.bat", "Error.bat expected");
+}
+
+// FOCUS missing param 106 (ALAI / legacy required)
+{
+  const store = createStore();
+  const input = demoFocusInput();
+  input.params = { ...input.params, realizedGainLossAcct: "" };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "should fail without param 106");
+  check(result.stages[0]?.detail.includes("106"), "param 106 message");
+  check(result.batchFile === "Error.bat", "Error.bat for 106");
+}
+
+// PDR collection (wf_proccollpdr)
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    pdrTranTypes: ["PD"],
+    pdrItems: [
+      {
+        orNo: "ORPDR001",
+        orDate: today,
+        itemNo: 1,
+        payType: "PD",
+        acctType: "PDRPREM",
+        orItemAmt: 250,
+        currency: "PHP",
+      },
+    ],
+  };
+  // Balance the extra PDR credit with matching cash DR via excess-cash balentries
+  // (demo OR/DIS/DEP still balance among themselves; PDR adds CR 250 → balentries posts DR/CR to excess).
+  const result = runFocusMapping(store, input);
+  check(result.ok, `pdr focus failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  const pdrStage = result.stages.find((s) => s.stage === "collPdr");
+  check(pdrStage?.rowsAdded === 1, "expected 1 PDR line");
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORPDR001" && r.acctCode === "401050"),
+    "PDR mapped to 401050",
+  );
+  const totals = debitCreditTotals(result.mapFocus);
+  check(totals.debit === totals.credit, `PDR path imbalance DR=${totals.debit} CR=${totals.credit}`);
+}
+
+// Fund transfer balanced (wf_fundtransfer)
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    fundTransferDebits: [
+      {
+        disNo: "FT000001",
+        disDate: today,
+        currency: "PHP",
+        acctCode: "501100",
+        drCr: "DR",
+        amount: 800,
+        itemNo: 1,
+        payType: "CSH",
+      },
+    ],
+    fundTransferCredits: [
+      {
+        disNo: "FT000001",
+        disDate: today,
+        currency: "PHP",
+        acctCode: "101100",
+        drCr: "CR",
+        amount: 800,
+        itemNo: 1,
+        payType: "CSH",
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `ft failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  const ft = result.stages.find((s) => s.stage === "fundTransfer");
+  check(ft?.rowsAdded === 2, "expected 2 fund-transfer lines");
+  check(store.unbalDocs.length === 0, "no unbaldoc on balanced FT");
+  check(
+    result.mapFocus.some((r) => r.refNo === "FT000001" && r.drCr === "DR" && r.amount === 800),
+    "FT debit present",
+  );
+}
+
+// Fund transfer unbalanced → UNBALDOC + BDOAPMST=Q
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    proc: {
+      compCode: "ALAI",
+      foCode: "001",
+      dateRec: today,
+      fileName: "0806XXX",
+      batchFile: "Error.bat",
+    },
+    params: DEMO_PARAMS,
+    acctEnt: DEMO_ACCTENT,
+    userId: "DEMO",
+    fundTransferDebits: [
+      {
+        disNo: "FTBAD001",
+        disDate: today,
+        currency: "PHP",
+        acctCode: "501100",
+        drCr: "DR",
+        amount: 500,
+      },
+    ],
+    fundTransferCredits: [
+      {
+        disNo: "FTBAD001",
+        disDate: today,
+        currency: "PHP",
+        acctCode: "101100",
+        drCr: "CR",
+        amount: 300,
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "unbalanced FT should fail");
+  check(result.batchFile === "Error.bat", "Error.bat on unbal FT");
+  check(store.unbalDocs.length === 1, "expected one UNBALDOC");
+  check(store.unbalDocs[0].docNum === "FTBAD001", "docnum");
+  check(store.unbalDocs[0].totalDebit === 500 && store.unbalDocs[0].totalCredit === 300, "amounts");
+  check(store.bdoApMst[0].status === "Q", "BDOAPMST Q on unbal doc");
+  check(store.currLedge.length === 0, "should not commit on failure");
+}
+
+// numbersign helper
+{
+  check(numberSignFor("DR", "214000") === "*", "excess cash *");
+  check(numberSignFor("DR", "205002") === "*", "clearing *");
+  check(numberSignFor("CR", "214000") === " ", "CR no star");
+  check(numberSignFor("DR", "101001") === " ", "other acct");
 }
 
 // CDR happy path

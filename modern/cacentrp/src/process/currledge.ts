@@ -26,6 +26,8 @@ export interface CurrLedgeRow {
   effectDate: string;
   userId: string;
   tranType?: string;
+  /** Legacy mapfocus.numbersign — '*' for DR on 214000 / 205002 */
+  numberSign?: string;
 }
 
 export interface AcctEntRule {

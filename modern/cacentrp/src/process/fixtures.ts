@@ -51,6 +51,14 @@ export const DEMO_ACCTENT: AcctEntRule[] = [
     lob: "01",
   },
   {
+    coCode: "ALAI",
+    tranType: "PDRPREM",
+    acctCode: "401050",
+    drCr: "CR",
+    lob: "01",
+    payType: "PD",
+  },
+  {
     coCode: "AP",
     tranType: "PREM",
     acctCode: "401001",
