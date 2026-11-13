@@ -33,8 +33,8 @@ export const DAILY_STAGES: PipelineStage[] = [
     menuId: "m_autoemaildetach",
     title: "Auto Email Detach",
     window: "w_unload",
-    status: "skeleton",
-    notes: "Mail → FOCUS/CDR + inbound BRS/SSI; mapping via daily focus|cdr",
+    status: "ported",
+    notes: "Mail+inbound orchestrator; mapDownstream → FOCUS/CDR/BPY/GRP (TRANEXT writers still stub)",
   },
   {
     id: "focus-map",
@@ -57,8 +57,8 @@ export const DAILY_STAGES: PipelineStage[] = [
     menuId: "m_manualloading",
     title: "Manual Loading",
     window: "w_user_unload",
-    status: "skeleton",
-    notes: "Same unload path without MAPI; shares writers with w_unload",
+    status: "ported",
+    notes: "Shares runUnload without MAPI; same mapDownstream path",
   },
   {
     id: "bpy-map",
@@ -124,6 +124,7 @@ export interface DailyRunOptions {
   seedLedger?: boolean;
   messages?: MailMessage[];
   inboundPaths?: string[];
+  mapDownstream?: boolean;
   endOfDay?: Partial<EndOfDayOptions>;
 }
 
@@ -144,6 +145,7 @@ export function runDailyPipeline(opts: DailyRunOptions): DailyRunResult {
       path,
       kind: detectInboundKind(path),
     })),
+    mapDownstream: opts.mapDownstream ?? true,
   };
   const unload = runUnload(store, unloadInput);
 

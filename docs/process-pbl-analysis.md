@@ -50,7 +50,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 
 - Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp|inspect`)
 - End-of-day against in-memory ledger store
-- Unload orchestrator skeleton (mail / FOCUS / CDR / BRS / SSI) with mock adapters
+- Unload orchestrator with optional mapDownstream → FOCUS/CDR/BPY/GRP — see [`docs/unload.md`](unload.md)
 - FOCUS / CDR → `CURRLEDGE` mapping
 - GL Walker NLSP + LSP `GLWDTL` → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
 - LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
@@ -60,4 +60,4 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - TRANEXT schemas JSON from sample DBFs
 - Object inventory (166 source objects)
 
-Next slice: deepen `w_unload` / `w_user_unload` (mail + DBF load + TRANEXT writers).
+Next slice: TRANEXT `wf_write2*` DBF→working-table loaders, or ALAI FOCUS variant polish.
