@@ -25,7 +25,7 @@
 Fund-transfer / net-DIS / disbursement document imbalance → `f_write2unbaldoc` (`UNBALDOC`) and BDOAPMST status **`Q`** (per-doc) or **`H`** (grand total).  
 `mapfocus.numbersign` = `*` on DR for accounts `214000` / `205002`.
 
-On failure: ROLLBACK; reject path archives to `*U` tables and sets BDOAPMST error status.
+On failure: **`wf_processreject`** — set BDOAPMST status, copy `mapfocus` → `unbalCurrLedge`, archive OR/DIS/cash/deposit working tables to `*U` (`focusWorkingU`), clear live working tables; batch `Error.bat`.
 
 ## CDR `ue_createacctent`
 
@@ -45,10 +45,10 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 
 - `src/process/currledge.ts` — structure + helpers (`numberSign` optional)  
 - `src/process/focus.ts` — stage pipeline (collection → collPdr → disbursement → disAddDed → fundTransfer → disbNet → deposit → balance → complete)  
-- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`)  
+- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`), `focusWorkingU` (`*U` reject archive)  
 - `src/process/cdr.ts` — APTRANS/APDEPOSIT mapper  
 - CLI: `cacentrp daily focus` / `cacentrp daily cdr`
 
 ## Still pending
 
-Full DataWindow SQL joins for OR/DIS check paths; SYRADJPARM / adj-entry depth inside `wf_balentries`.
+Full DataWindow SQL joins for OR/DIS check paths; SYRADJPARM adj loop is empty in extracted PB source.

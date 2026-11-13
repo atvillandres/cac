@@ -51,7 +51,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp|inspect`)
 - End-of-day against in-memory ledger store
 - Unload orchestrator with optional mapDownstream → FOCUS/CDR/BPY/GRP — see [`docs/unload.md`](unload.md)
-- FOCUS / CDR → `CURRLEDGE` mapping (PDR / add-ded / `wf_spcexcsh` / fund transfer / net DIS / UNBALDOC / ERRCASHBAL / param 106) — see [`docs/focus-cdr-mapping.md`](focus-cdr-mapping.md)
+- FOCUS / CDR → `CURRLEDGE` mapping (PDR / add-ded / `wf_spcexcsh` / fund transfer / net DIS / UNBALDOC / ERRCASHBAL / `wf_processreject` `*U` / param 106) — see [`docs/focus-cdr-mapping.md`](focus-cdr-mapping.md)
 - GL Walker NLSP + LSP `GLWDTL` → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
 - LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
 - BRS `.ALI` upload — see [`docs/brs-upload.md`](brs-upload.md)
@@ -60,4 +60,4 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - TRANEXT DBF ImportFile + typed CS/DA/RA–RF/VA–VH + APTRANS/APDEP — see [`docs/tranext.md`](tranext.md)
 - Object inventory (166 source objects)
 
-Next slice: FOCUS SYRADJPARM / adj-entry depth, or HA/OA/OB/VI/RC1 writers if still open (#13).
+Next slice: FOCUS OR/DIS check-path DataWindow depth, or merge open TRANEXT misc writers (#13).

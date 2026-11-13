@@ -22,7 +22,7 @@ import {
   type CurrLedgeRow,
   type ProcCdrVar,
 } from "./currledge.js";
-import type { DailyStore, UnbalDocRow } from "./store.js";
+import type { DailyStore, FocusWorkingSnapshot, UnbalDocRow } from "./store.js";
 
 export interface OrCashRow {
   orNo: string;
@@ -979,6 +979,94 @@ export function balanceEntries(
   };
 }
 
+function snapshotFocusWorking(store: DailyStore): FocusWorkingSnapshot {
+  const copy = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
+  return {
+    cashBalance: copy(store.cashBalance),
+    orMainCurr: copy(store.orMainCurr),
+    orItemCurr: copy(store.orItemCurr),
+    orItemDtlCurr: copy(store.orItemDtlCurr),
+    orCashCurr: copy(store.orCashCurr),
+    orCheckCurr: copy(store.orCheckCurr),
+    orAprCurr: copy(store.orAprCurr),
+    disMainCurr: copy(store.disMainCurr),
+    disItemCurr: copy(store.disItemCurr),
+    disItemDtlCurr: copy(store.disItemDtlCurr),
+    disAddCurr: copy(store.disAddCurr),
+    disDedCurr: copy(store.disDedCurr),
+    disCashCurr: copy(store.disCashCurr),
+    disCheckCurr: copy(store.disCheckCurr),
+    disPlanCurr: copy(store.disPlanCurr),
+    depositSlip: copy(store.depositSlip),
+  };
+}
+
+function clearFocusWorking(store: DailyStore): void {
+  store.cashBalance = [];
+  store.orMainCurr = [];
+  store.orItemCurr = [];
+  store.orItemDtlCurr = [];
+  store.orCashCurr = [];
+  store.orCheckCurr = [];
+  store.orAprCurr = [];
+  store.disMainCurr = [];
+  store.disItemCurr = [];
+  store.disItemDtlCurr = [];
+  store.disAddCurr = [];
+  store.disDedCurr = [];
+  store.disCashCurr = [];
+  store.disCheckCurr = [];
+  store.disPlanCurr = [];
+  store.depositSlip = [];
+}
+
+function countWorkingRows(snap: FocusWorkingSnapshot): number {
+  return (
+    snap.cashBalance.length +
+    snap.orMainCurr.length +
+    snap.orItemCurr.length +
+    snap.orItemDtlCurr.length +
+    snap.orCashCurr.length +
+    snap.orCheckCurr.length +
+    snap.orAprCurr.length +
+    snap.disMainCurr.length +
+    snap.disItemCurr.length +
+    snap.disItemDtlCurr.length +
+    snap.disAddCurr.length +
+    snap.disDedCurr.length +
+    snap.disCashCurr.length +
+    snap.disCheckCurr.length +
+    snap.disPlanCurr.length +
+    snap.depositSlip.length
+  );
+}
+
+/**
+ * Port of wf_processreject — BDO status, mapfocus → unbalCurrLedge,
+ * archive OR/DIS/cash/deposit working tables to `*U`, then clear live tables.
+ */
+export function processReject(
+  store: DailyStore,
+  input: FocusInput,
+  mapFocus: CurrLedgeRow[],
+  status: string,
+): FocusStageResult {
+  const updated = updateBdoStatus(store, input, status);
+  if (mapFocus.length) {
+    store.unbalCurrLedge.push(...mapFocus.map((r) => ({ ...r })));
+  }
+  const snap = snapshotFocusWorking(store);
+  const archived = countWorkingRows(snap);
+  store.focusWorkingU.push(snap);
+  clearFocusWorking(store);
+  return {
+    stage: "reject",
+    ok: true,
+    detail: `Reject archive *U (${archived} working row(s)); mapfocus→unbalCurrLedge ${mapFocus.length}; BDOAPMST=${status} (${updated} updated)`,
+    rowsAdded: 0,
+  };
+}
+
 export function processComplete(
   store: DailyStore,
   input: FocusInput,
@@ -999,6 +1087,23 @@ export function processComplete(
     ok: true,
     detail: `Wrote ${mapFocus.length} CURRLEDGE row(s); BDOAPMST status=${status} (${updated} updated)`,
     rowsAdded: mapFocus.length,
+  };
+}
+
+function failFocus(
+  store: DailyStore,
+  input: FocusInput,
+  stages: FocusStageResult[],
+  mapFocus: CurrLedgeRow[],
+  status: string,
+): FocusResult {
+  stages.push(processReject(store, input, mapFocus, status));
+  return {
+    ok: false,
+    stages,
+    mapFocus,
+    batchFile: "Error.bat",
+    unbalDocs: [...store.unbalDocs],
   };
 }
 
@@ -1062,33 +1167,42 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
     const result = step(input, mapFocus);
     stages.push(result);
     if (!result.ok) {
-      return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+      return failFocus(store, input, stages, mapFocus, "J");
     }
   }
 
   const ft = processFundTransfer(store, input, mapFocus);
   stages.push(ft);
   if (!ft.ok) {
-    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+    const status = store.bdoApMst.find(
+      (b) => b.company === input.proc.compCode && b.bdoCode === input.proc.foCode,
+    )?.status;
+    return failFocus(store, input, stages, mapFocus, status === "H" ? "H" : "Q");
   }
 
   // Legacy: wf_procdisbnet runs at end of wf_processdisbursement after fund transfer
   const net = processDisbNet(store, input, mapFocus);
   stages.push(net);
   if (!net.ok) {
-    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+    const status = store.bdoApMst.find(
+      (b) => b.company === input.proc.compCode && b.bdoCode === input.proc.foCode,
+    )?.status;
+    return failFocus(store, input, stages, mapFocus, status === "H" ? "H" : "Q");
   }
 
   const dep = processDeposit(input, mapFocus);
   stages.push(dep);
   if (!dep.ok) {
-    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+    return failFocus(store, input, stages, mapFocus, "H");
   }
 
   const bal = balanceEntries(store, input, mapFocus);
   stages.push(bal);
   if (!bal.ok) {
-    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+    const status = store.bdoApMst.find(
+      (b) => b.company === input.proc.compCode && b.bdoCode === input.proc.foCode,
+    )?.status;
+    return failFocus(store, input, stages, mapFocus, status === "I" ? "I" : "H");
   }
 
   const complete = processComplete(store, input, mapFocus, "L");
