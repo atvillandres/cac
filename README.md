@@ -14,7 +14,9 @@ node dist/index.js --inspect
 node dist/index.js --variant ALAI --user DEMO --password demo --skip-cleanup
 node dist/index.js daily list
 node dist/index.js daily run --seed-ledger
+node dist/index.js daily focus
+node dist/index.js daily cdr
 npm test
 ```
 
-Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md).
+Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md).

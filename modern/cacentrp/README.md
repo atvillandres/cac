@@ -27,10 +27,12 @@ npm run daily -- list
 npm run daily -- inspect
 npm run daily -- run --seed-ledger --user DEMO
 npm run daily -- endofday --seed-ledger
+npm run daily -- focus
+npm run daily -- cdr
 npm test
 ```
 
-See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md).
+See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md) and [`docs/focus-cdr-mapping.md`](../../docs/focus-cdr-mapping.md).
 
 ## Layout
 
