@@ -18,13 +18,18 @@ import type {
   DisItemDtlCurrRow,
   DisMainCurrRow,
   DisPlanCurrRow,
+  DisWtaxRow,
   FoControlRow,
+  HsDlpOrRow,
+  LAmendRow,
+  LApplNoHistRow,
   OrAprCurrRow,
   OrCashCurrRow,
   OrCheckCurrRow,
   OrItemCurrRow,
   OrItemDtlCurrRow,
   OrMainCurrRow,
+  OrRtrnCurrRow,
 } from "./store.js";
 import type {
   DepositRow,
@@ -76,7 +81,7 @@ const DOMAIN: Record<string, string> = {
   RA: "OR header",
   RB: "OR group/policy item",
   RC: "OR item detail",
-  RC1: "OR item detail (variant)",
+  RC1: "OR check return",
   RD: "OR cash",
   RE: "OR check",
   RF: "OR APR / withheld",
@@ -88,6 +93,10 @@ const DOMAIN: Record<string, string> = {
   VF: "DIS cash",
   VG: "DIS check",
   VH: "DIS plan premium",
+  VI: "DIS withholding tax",
+  HA: "HS DLP / OR adjust",
+  OA: "Life amendment",
+  OB: "Application no history",
   CS: "Cash balance",
   DA: "Deposit slip",
   FO_TCDBF: "FOCUS extract control",
@@ -734,6 +743,158 @@ export function write2Vh(
   return { code: "VH", ok: true, read: rows.length, written, rejected: 0, detail: `DISPLANCURR +${written}` };
 }
 
+/** Port of wf_write2rc1 → ORRTRNCURR. */
+export function write2Rc1(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  let written = 0;
+  for (const row of rows) {
+    const rec: OrRtrnCurrRow = {
+      company: ctx.company,
+      orNo: str(row, "ORNO"),
+      orDate: str(row, "ORDATE") || today,
+      foCode: str(row, "FOCODE") || ctx.foCode,
+      checkItemNo: num(row, "CHECKITEMN"),
+      dateDep: str(row, "DATEDEP"),
+      dateRtrn: str(row, "DATERTRN"),
+      rtrnRsn: str(row, "RTRNRSN"),
+      userId: str(row, "USERID") || ctx.userId,
+      dateStamp: str(row, "DATESTAMP") || today,
+      processDate: today,
+      userIdCac: ctx.userId,
+    };
+    store.orRtrnCurr.push(rec);
+    written++;
+  }
+  return { code: "RC1", ok: true, read: rows.length, written, rejected: 0, detail: `ORRTRNCURR +${written}` };
+}
+
+/** Port of wf_write2vi → DISWTAX. */
+export function write2Vi(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  let written = 0;
+  for (const row of rows) {
+    const rec: DisWtaxRow = {
+      company: ctx.company,
+      foCode: str(row, "FOCODE") || ctx.foCode,
+      disForm: str(row, "DISFORM"),
+      disNo: str(row, "DISNO"),
+      disDate: str(row, "DISDATE") || today,
+      grpItemNo: num(row, "GRPITEMNO"),
+      itemNo: num(row, "ITEMNO"),
+      disTaxCode: str(row, "DISTAXCODE"),
+      disAmt: num(row, "DISAMT"),
+      disTaxRate: num(row, "DISTAXRATE"),
+      disTaxWhel: num(row, "DISTAXWHEL"),
+      disTaxDesc: str(row, "DISTAXDESC"),
+      venCode: str(row, "VENCODE"),
+      processDate: today,
+      userId: ctx.userId,
+    };
+    store.disWtax.push(rec);
+    written++;
+  }
+  return { code: "VI", ok: true, read: rows.length, written, rejected: 0, detail: `DISWTAX +${written}` };
+}
+
+/** Port of wf_write2ha → HSDLPOR. */
+export function write2Ha(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  let written = 0;
+  for (const row of rows) {
+    const rec: HsDlpOrRow = {
+      company: ctx.company,
+      foCode: str(row, "FOCODE") || ctx.foCode,
+      tranDate: str(row, "TRANDATE") || num(row, "TRANDATE") || today,
+      polNo: str(row, "POLNO"),
+      oldDlp: num(row, "OLDDLP"),
+      adjDlp: num(row, "ADJDLP"),
+      orNo: str(row, "ORNO"),
+      orDate: str(row, "ORDATE") || today,
+      orAmt: num(row, "ORAMT"),
+      userId: str(row, "USERID") || ctx.userId,
+      dateStamp: str(row, "DATESTAMP") || today,
+      processDate: today,
+      userIdCac: ctx.userId,
+    };
+    store.hsDlpOr.push(rec);
+    written++;
+  }
+  return { code: "HA", ok: true, read: rows.length, written, rejected: 0, detail: `HSDLPOR +${written}` };
+}
+
+/** Port of wf_write2oa → LAMEND. */
+export function write2Oa(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  let written = 0;
+  for (const row of rows) {
+    const rec: LAmendRow = {
+      company: ctx.company,
+      foCode: str(row, "FOCODE") || ctx.foCode,
+      amendType: str(row, "AMENDTYPE"),
+      polNo: str(row, "POLNO"),
+      effectDate: str(row, "EFFECTDATE") || today,
+      oldPayMode: str(row, "OLDPAYMODE"),
+      newPayMode: str(row, "NEWPAYMODE"),
+      oldModPrem: num(row, "OLDMODPREM"),
+      newModPrem: num(row, "NEWMODPREM"),
+      oldAgtNo: str(row, "OLDAGTNO"),
+      newAgtNo: str(row, "NEWAGTNO"),
+      oldPtd: str(row, "OLDPTD"),
+      newPtd: str(row, "NEWPTD"),
+      userId: str(row, "USERID") || ctx.userId,
+      dateStamp: str(row, "DATESTAMP") || today,
+      remarks: str(row, "REMARKS"),
+      processDate: today,
+      userIdCac: ctx.userId,
+    };
+    store.lAmend.push(rec);
+    written++;
+  }
+  return { code: "OA", ok: true, read: rows.length, written, rejected: 0, detail: `LAMEND +${written}` };
+}
+
+/** Port of wf_write2ob → LAPPLNOHIST. */
+export function write2Ob(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  let written = 0;
+  for (const row of rows) {
+    const rec: LApplNoHistRow = {
+      company: ctx.company,
+      applNo: str(row, "APPLNO"),
+      seqNo: num(row, "SEQNO"),
+      effectDate: str(row, "EFFECTDATE") || today,
+      newApplNo: str(row, "NEWAPPLNO"),
+      userId: str(row, "USERID") || ctx.userId,
+      dateStamp: str(row, "DATESTAMP") || today,
+      processDate: today,
+      userIdCac: ctx.userId,
+    };
+    store.lApplNoHist.push(rec);
+    written++;
+  }
+  return { code: "OB", ok: true, read: rows.length, written, rejected: 0, detail: `LAPPLNOHIST +${written}` };
+}
+
 /** ImportFile + wf_write2* for one TRANEXT code. */
 export function write2TranextCode(
   store: DailyStore,
@@ -777,6 +938,16 @@ export function write2TranextCode(
       return write2Vg(store, rows, ctx);
     case "VH":
       return write2Vh(store, rows, ctx);
+    case "RC1":
+      return write2Rc1(store, rows, ctx);
+    case "VI":
+      return write2Vi(store, rows, ctx);
+    case "HA":
+      return write2Ha(store, rows, ctx);
+    case "OA":
+      return write2Oa(store, rows, ctx);
+    case "OB":
+      return write2Ob(store, rows, ctx);
     case "FO_TCDBF":
       return write2FoControl(store, rows);
     default:

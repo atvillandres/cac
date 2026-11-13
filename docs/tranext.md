@@ -27,10 +27,15 @@ then calls `wf_write2{code}` to load repository / working tables (ORMAINCURR, CA
 | VH | DIS plan premium | `disPlanCurr` |
 | CS | Cash balance | `cashBalance` |
 | DA | Deposit slip | `depositSlip` (+ `apDeposits` bank key) |
+| RC1 | OR check return | `orRtrnCurr` |
+| VI | DIS withholding tax | `disWtax` |
+| HA | HS DLP / OR adjust | `hsDlpOr` |
+| OA | Life amendment | `lAmend` |
+| OB | Application no history | `lApplNoHist` |
 
 `focusWorkingFromStore` projects RC/RD/RE/VC/VF/DA into FOCUS `orCash` / `orItems` / `disCash` / `disItems` / `deposits`.
 
-CDR path still uses separate `APTRANS` / `APDEP` writers (not in the ALAI TRANEXT sample folder).
+CDR path still uses separate `APTRANS` / `APDEP` writers (not in the ALAI TRANEXT sample folder) — see open PR or follow-up.
 
 ## Modern module
 
