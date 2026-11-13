@@ -19,6 +19,7 @@ import { runGrpMapping } from "./grp.js";
 import type { BpyFileRow, DailyStore, GrpFileRow } from "./store.js";
 import {
   FOCUS_TRANEXT_FILES,
+  focusWorkingFromStore,
   runTranextLoad,
   type TranextCode,
   type TranextLoadResult,
@@ -67,6 +68,8 @@ export interface UnloadInput {
   tranextDir?: string;
   tranextCompany?: string;
   tranextFoCode?: string;
+  /** When true with mapDownstream, feed FOCUS from typed TRANEXT tables (needs matching ACCTENT). */
+  focusFromTranext?: boolean;
 }
 
 export interface UnloadStepLog {
@@ -347,6 +350,7 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     // FOCUS — one demo/map call per job (payload tables not yet parsed from FCS)
     for (const job of focusJobs) {
       const base = input.focusInput ?? demoFocusInput(input.userId);
+      const fromTx = input.focusFromTranext ? focusWorkingFromStore(store) : null;
       const focusIn: FocusInput = {
         ...base,
         userId: input.userId,
@@ -358,6 +362,15 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
           foCode: job.foCode,
           fileName: job.subFile,
         },
+        ...(fromTx
+          ? {
+              orCash: fromTx.orCash,
+              orItems: fromTx.orItems,
+              disCash: fromTx.disCash,
+              disItems: fromTx.disItems,
+              deposits: fromTx.deposits,
+            }
+          : {}),
       };
       const before = store.currLedge.length;
       const result = runFocusMapping(store, focusIn);
