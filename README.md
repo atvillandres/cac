@@ -22,6 +22,7 @@ node dist/index.js daily brs --inbound /tmp/bis
 node dist/index.js daily bpy
 node dist/index.js daily grp
 node dist/index.js daily tranext
+node dist/index.js daily aptrans
 npm test
 ```
 

@@ -397,8 +397,15 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
           fileName: job.subFile,
         },
       };
-      if (cdrIn.apTrans) store.apTrans = cdrIn.apTrans.map((t) => ({ ...t }));
-      if (cdrIn.apDeposits) store.apDeposits = cdrIn.apDeposits.map((d) => ({ ...d }));
+      // Prefer TRANEXT-loaded APTRANS/APDEP; else demo/input payloads
+      if (!store.apTrans.length && cdrIn.apTrans) {
+        store.apTrans = cdrIn.apTrans.map((t) => ({ ...t }));
+      }
+      if (!store.apDeposits.length && cdrIn.apDeposits) {
+        store.apDeposits = cdrIn.apDeposits.map((d) => ({ ...d }));
+      }
+      cdrIn.apTrans = store.apTrans.map((t) => ({ ...t }));
+      cdrIn.apDeposits = store.apDeposits.map((d) => ({ ...d }));
       const before = store.currLedge.length;
       const result = runCdrMapping(store, cdrIn);
       const added = store.currLedge.length - before;

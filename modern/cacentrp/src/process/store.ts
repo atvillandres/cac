@@ -26,19 +26,35 @@ export interface CashBalanceRow {
 }
 
 export interface ApTransStoreRow {
+  counter?: number;
+  company?: string;
+  region?: string;
+  lob?: string;
   docNum: string;
   docDate: string;
+  docType?: string;
+  refDoc?: string;
+  payor?: string;
   acctType: string;
   amount: number;
   payType?: string;
+  payPyTyp?: string;
+  unit?: string;
   status?: string;
+  processDate?: string;
 }
 
 export interface ApDepositStoreRow {
+  company?: string;
+  bdoCode?: string;
   bankAcct: string;
+  depDate?: string;
   tranDate: string;
   amount: number;
+  payType?: string;
+  depChkNo?: string;
   status?: string;
+  processDate?: string;
 }
 
 /** Port of INTINPFL row written by w_lspupload. */

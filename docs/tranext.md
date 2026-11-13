@@ -30,16 +30,23 @@ then calls `wf_write2{code}` to load repository / working tables (ORMAINCURR, CA
 
 `focusWorkingFromStore` projects RC/RD/RE/VC/VF/DA into FOCUS `orCash` / `orItems` / `disCash` / `disItems` / `deposits`.
 
-CDR path still uses separate `APTRANS` / `APDEP` writers (not in the ALAI TRANEXT sample folder).
+### CDR pack (`APTRANS.DBF` / `APDEP.DBF`)
+
+| Code | Domain | Typed modern target |
+|------|--------|---------------------|
+| APTRANS | AP transactions | `apTrans` (accttype remaps + unit lookup) |
+| APDEP | AP deposits | `apDeposits` (CSH/CHK from DEPCHKNO; date checks) |
+
+Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separately. Demo rows: `demoApTransRows` / `demoApDepRows`.
 
 ## Modern module
 
 - `src/process/dbf.ts` — dBase III reader  
-- `src/process/tranext.ts` — schemas + `write2*` + `runTranextLoad` + FOCUS bridge  
+- `src/process/tranext.ts` — schemas + `write2*` + `runTranextLoad` + FOCUS/CDR bridges  
 - Fixtures: `fixtures/tranext/*.DBF` (from zip `ALAI/TRANEXT`)  
-- CLI: `cacentrp daily tranext [--tranext dir]`  
+- CLI: `cacentrp daily tranext [--tranext dir]` / `daily aptrans`  
 - Unload: `--tranext <dir>` on `daily unload` / `daily run`
 
 ## Still pending
 
-Typed `wf_write2aptrans` / `wf_write2apdep` (CDR path); ALAI FOCUS (`w_alaifocusproc`) polish.
+ALAI FOCUS (`w_alaifocusproc`) polish; remaining stub writers (HA/OA/OB/VI/RC1).
