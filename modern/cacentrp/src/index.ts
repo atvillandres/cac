@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|endofday
+ *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -27,6 +27,7 @@ import { runUnload, detectInboundKind } from "./process/unload.js";
 import { runFocusMapping } from "./process/focus.js";
 import { runCdrMapping } from "./process/cdr.js";
 import { demoCdrInput, demoFocusInput } from "./process/fixtures.js";
+import { runGlWalkerAllCompanies } from "./process/glwalker.js";
 import type { AppContext, Variant } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -35,7 +36,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday|focus|cdr> [daily-options]
+  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -54,6 +55,7 @@ Daily options:
   --message-file <path>   Synthetic mail attachment path
   --no-glwalker           End-of-day refuses unless GL Walker confirmed
   --no-archive            End-of-day cancel confirm
+  --out <dir>             Output directory for glwalker .GLW files
 `);
   process.exit(0);
 }
@@ -94,6 +96,7 @@ function parseDailyArgs(argv: string[]) {
     messageFiles: string[];
     glWalkerDone: boolean;
     confirmArchive: boolean;
+    outDir: string;
   } = {
     cmd,
     userId: "DEMO",
@@ -102,6 +105,7 @@ function parseDailyArgs(argv: string[]) {
     messageFiles: [],
     glWalkerDone: true,
     confirmArchive: true,
+    outDir: resolve(PKG_ROOT, "out/glwalker"),
   };
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
@@ -113,6 +117,7 @@ function parseDailyArgs(argv: string[]) {
     else if (a === "--message-file") opts.messageFiles.push(argv[++i]!);
     else if (a === "--no-glwalker") opts.glWalkerDone = false;
     else if (a === "--no-archive") opts.confirmArchive = false;
+    else if (a === "--out") opts.outDir = resolve(argv[++i] ?? opts.outDir);
     else throw new Error(`Unknown daily argument: ${a}`);
   }
   return opts;
@@ -312,8 +317,18 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
+  if (opts.cmd === "glwalker") {
+    const store = createStore();
+    seedDemoLedger(store);
+    const results = runGlWalkerAllCompanies(store.currLedge, opts.outDir);
+    for (const r of results) {
+      console.log(`${r.ok ? "OK" : "!!"} [${r.company}] ${r.detail}${r.path ? ` (${r.path})` : ""}`);
+    }
+    return;
+  }
+
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker)`,
   );
 }
 

@@ -81,8 +81,8 @@ export const DAILY_STAGES: PipelineStage[] = [
     menuId: "m_createglwfile",
     title: "Merge LSP and Non-LSP / Create GLW File",
     window: "w_glwalker",
-    status: "pending",
-    notes: "Large GL Walker text extract (~200KB PowerScript)",
+    status: "ported",
+    notes: "NLSP CURRLEDGE → fixed-width .GLW (H/A/P); LSP GLWDTL merge next",
   },
   {
     id: "endofday",

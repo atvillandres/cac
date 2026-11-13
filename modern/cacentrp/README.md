@@ -29,17 +29,18 @@ npm run daily -- run --seed-ledger --user DEMO
 npm run daily -- endofday --seed-ledger
 npm run daily -- focus
 npm run daily -- cdr
+npm run daily -- glwalker --out /tmp/glw
 npm test
 ```
 
-See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md) and [`docs/focus-cdr-mapping.md`](../../docs/focus-cdr-mapping.md).
+See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](../../docs/focus-cdr-mapping.md), and [`docs/glwalker.md`](../../docs/glwalker.md).
 
 ## Layout
 
 - `src/exe/manifest.ts` — library list the EXE would load  
 - `src/config/ini.ts` — `ProfileString`-compatible INI reader  
 - `src/app/*` — ports of recovered shell PowerScript  
-- `src/process/*` — daily pipeline (unload skeleton + end-of-day)  
+- `src/process/*` — daily pipeline (unload, FOCUS/CDR, GL Walker, end-of-day)  
 - `legacy-source/` — recovered PowerScript (`cac.pbl` + key `process.pbl` objects)  
 - `src/db/adapter.ts` — mock DB (wire real ODBC/Postgres later)
 
