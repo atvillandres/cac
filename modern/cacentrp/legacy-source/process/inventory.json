@@ -1,0 +1,832 @@
+[
+  {
+    "name": "cacentrp.srj",
+    "bytes": 15086,
+    "ext": ".srj"
+  },
+  {
+    "name": "d_acctent_mstr.srd",
+    "bytes": 2213,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_apctrl_wrk.srd",
+    "bytes": 6084,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_apdep_wrk.srd",
+    "bytes": 4515,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_apmoddta.srd",
+    "bytes": 18562,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_aptrans_mstr.srd",
+    "bytes": 4615,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_aptrans_valid.srd",
+    "bytes": 14601,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_aptrans_wrk.srd",
+    "bytes": 8565,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_aptransx_mstr.srd",
+    "bytes": 4527,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_bdoapdtl_wrk.srd",
+    "bytes": 18122,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_bdoapmst4brs.srd",
+    "bytes": 12949,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_bdoapmst_wrk.srd",
+    "bytes": 12522,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_bdoerror_wrk.srd",
+    "bytes": 12032,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_brsfilex.srd",
+    "bytes": 8540,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_cac_procstatus.srd",
+    "bytes": 5662,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_cheques.srd",
+    "bytes": 6918,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_cs_wrk.srd",
+    "bytes": 2957,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_da_wrk.srd",
+    "bytes": 10592,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbcash.srd",
+    "bytes": 3191,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbcashcheck.srd",
+    "bytes": 2721,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbcashnet.srd",
+    "bytes": 3189,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbcheck.srd",
+    "bytes": 3092,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbchecknet.srd",
+    "bytes": 3089,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapcash.srd",
+    "bytes": 17631,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapcashnet.srd",
+    "bytes": 19442,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisadd.srd",
+    "bytes": 12999,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisadd_cash.srd",
+    "bytes": 13109,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisded.srd",
+    "bytes": 12461,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisded_cash.srd",
+    "bytes": 13714,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisded_check.srd",
+    "bytes": 13557,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disbmapdisded_orig.srd",
+    "bytes": 12126,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disitemcurr.srd",
+    "bytes": 21700,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_disitemdtlcurr_disno.srd",
+    "bytes": 19089,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dismapcheck.srd",
+    "bytes": 18387,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dismapcheck2.srd",
+    "bytes": 12640,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dismapchecknet.srd",
+    "bytes": 20917,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dismapgetcheck2.srd",
+    "bytes": 13202,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dtlcshchk.srd",
+    "bytes": 5119,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_dtldedunitcode.srd",
+    "bytes": 2917,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_errcashbal.srd",
+    "bytes": 6488,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_errortb.srd",
+    "bytes": 6413,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_excesscash.srd",
+    "bytes": 2873,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fctrl_wrk.srd",
+    "bytes": 9201,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback.srd",
+    "bytes": 21333,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback_error.srd",
+    "bytes": 9971,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback_tabular.srd",
+    "bytes": 27268,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback_tabular1.srd",
+    "bytes": 20363,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback_tabular2.srd",
+    "bytes": 15255,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_feedback_tabular3.srd",
+    "bytes": 22214,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fotcdbf.srd",
+    "bytes": 9629,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fundtransfer_disno.srd",
+    "bytes": 1708,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fundtransfercredit.srd",
+    "bytes": 15847,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fundtransfercredit_arg.srd",
+    "bytes": 3587,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_fundtransferdebit.srd",
+    "bytes": 16123,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_getmessage.srd",
+    "bytes": 2886,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_gltxtfile.srd",
+    "bytes": 1699,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwcntrl.srd",
+    "bytes": 3932,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwdetails.srd",
+    "bytes": 11768,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwdtl.srd",
+    "bytes": 28494,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwgissum.srd",
+    "bytes": 18629,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwgrpnumber.srd",
+    "bytes": 4291,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwhdr.srd",
+    "bytes": 29996,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwlspdtl.srd",
+    "bytes": 27918,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwlspsum.srd",
+    "bytes": 26475,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwlspsum_orig.srd",
+    "bytes": 28245,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwpayor.srd",
+    "bytes": 3760,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwprocess_cd.srd",
+    "bytes": 9540,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwprooflist.srd",
+    "bytes": 12912,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_glwrefdoc.srd",
+    "bytes": 3769,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_gmappf.srd",
+    "bytes": 7770,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ha_wrk.srd",
+    "bytes": 8194,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_homeservice_jro.srd",
+    "bytes": 20717,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploadaptransx.srd",
+    "bytes": 5214,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploadbpytrans.srd",
+    "bytes": 14561,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploadbrstrans.srd",
+    "bytes": 7078,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploaddisitemcurrx.srd",
+    "bytes": 24423,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploadgrptrans.srd",
+    "bytes": 14555,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_lspuploadoritemcurrx.srd",
+    "bytes": 22733,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_mapaptrans.srd",
+    "bytes": 19338,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_mapbrs.srd",
+    "bytes": 19374,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_mapfocus.srd",
+    "bytes": 19374,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_maporcashcurr.srd",
+    "bytes": 3581,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_maporcheckcurr.srd",
+    "bytes": 3596,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_maporitemdtlcurr.srd",
+    "bytes": 14627,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_maporunique.srd",
+    "bytes": 4382,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_missing_disno.srd",
+    "bytes": 1371,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_missing_doc.srd",
+    "bytes": 6980,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_missing_or.srd",
+    "bytes": 1365,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_nopdpf.srd",
+    "bytes": 3072,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_oa_wrk.srd",
+    "bytes": 12118,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ob_wrk.srd",
+    "bytes": 5240,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ra_wrk.srd",
+    "bytes": 10593,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rb_wrk.srd",
+    "bytes": 6064,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rc1_wrk.srd",
+    "bytes": 7507,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rc_wrk.srd",
+    "bytes": 9776,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rd_wrk.srd",
+    "bytes": 5219,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_re_wrk.srd",
+    "bytes": 10621,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rep_errcashbal.srd",
+    "bytes": 6634,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rep_oramtpdfail.srd",
+    "bytes": 5853,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rep_orexeshrtfail.srd",
+    "bytes": 6744,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rep_submissionrep.srd",
+    "bytes": 6997,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rep_tranfail.srd",
+    "bytes": 7414,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_rf_wrk.srd",
+    "bytes": 5659,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_spcexcess.srd",
+    "bytes": 1542,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_syrbank.srd",
+    "bytes": 1518,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_syrgactpcc.srd",
+    "bytes": 2341,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_syrgbrnpcc.srd",
+    "bytes": 2339,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_syrunit_mstr.srd",
+    "bytes": 2927,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_tdhopf.srd",
+    "bytes": 3072,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_test.srd",
+    "bytes": 16368,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_tranfail_wrk.srd",
+    "bytes": 7421,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_u_currledge.srd",
+    "bytes": 4773,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ucurrledge.srd",
+    "bytes": 17426,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ucurrledgefocus.srd",
+    "bytes": 17426,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_unbaldocnum.srd",
+    "bytes": 2857,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_cashbalance.srd",
+    "bytes": 7765,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_discashcurr.srd",
+    "bytes": 10849,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_discheckcurr.srd",
+    "bytes": 14079,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_disitemdtladdcurr.srd",
+    "bytes": 11772,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_disitemdtlcurr.srd",
+    "bytes": 18843,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_disitemdtldedcurr.srd",
+    "bytes": 11772,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_dismaincurr.srd",
+    "bytes": 11666,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_displancurr.srd",
+    "bytes": 11697,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_diswtax.srd",
+    "bytes": 13982,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_dscurr.srd",
+    "bytes": 14785,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_hsdlpor.srd",
+    "bytes": 12360,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_lamend.srd",
+    "bytes": 16313,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_lapplnohist.srd",
+    "bytes": 9345,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_oraprcurr.srd",
+    "bytes": 10255,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_orcashcurr.srd",
+    "bytes": 9290,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_orcheckcurr.srd",
+    "bytes": 14851,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_oritemcurr.srd",
+    "bytes": 20936,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_oritemdtlcurr.srd",
+    "bytes": 14031,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_ormaincurr.srd",
+    "bytes": 14811,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_orrtrncurr.srd",
+    "bytes": 11646,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_tmpdtltype.srd",
+    "bytes": 19546,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_upd_tmpordtltype.srd",
+    "bytes": 15238,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_va_wrk.srd",
+    "bytes": 7496,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vb_wrk.srd",
+    "bytes": 17299,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vc_wrk.srd",
+    "bytes": 14447,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vd_wrk.srd",
+    "bytes": 7127,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_ve_wrk.srd",
+    "bytes": 7492,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vf_wrk.srd",
+    "bytes": 6723,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vg_wrk.srd",
+    "bytes": 9825,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vh_wrk.srd",
+    "bytes": 7158,
+    "ext": ".srd"
+  },
+  {
+    "name": "d_vi_wrk.srd",
+    "bytes": 9819,
+    "ext": ".srd"
+  },
+  {
+    "name": "dw_upd_bpyfile.srd",
+    "bytes": 15417,
+    "ext": ".srd"
+  },
+  {
+    "name": "dw_upd_bpyfile_orig.srd",
+    "bytes": 14548,
+    "ext": ".srd"
+  },
+  {
+    "name": "dw_upd_grpfile.srd",
+    "bytes": 15472,
+    "ext": ".srd"
+  },
+  {
+    "name": "f_test.srf",
+    "bytes": 409,
+    "ext": ".srf"
+  },
+  {
+    "name": "uo_timer.sru",
+    "bytes": 736,
+    "ext": ".sru"
+  },
+  {
+    "name": "w_alaifocusproc.srw",
+    "bytes": 244384,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_bpyinterfaceprocess.srw",
+    "bytes": 26578,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_brsinterfaceprocess.srw",
+    "bytes": 19931,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_cdrinterfaceprocess.srw",
+    "bytes": 46822,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_createacctent.srw",
+    "bytes": 30458,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_endofday.srw",
+    "bytes": 3868,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_focusinterfaceprocess.srw",
+    "bytes": 251906,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_focusinterfaceprocess_orig.srw",
+    "bytes": 204390,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_glwalker.srw",
+    "bytes": 201596,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_grpinterfaceprocess.srw",
+    "bytes": 19134,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_lspupload.srw",
+    "bytes": 70516,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_mail.srw",
+    "bytes": 25138,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_manual_send.srw",
+    "bytes": 13416,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_unload.srw",
+    "bytes": 291653,
+    "ext": ".srw"
+  },
+  {
+    "name": "w_user_unload.srw",
+    "bytes": 287774,
+    "ext": ".srw"
+  }
+]

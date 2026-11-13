@@ -20,12 +20,25 @@ npx tsx src/index.ts --inspect
 
 Default INI files live under `config/` (scrubbed samples from the legacy ALAI/AP installs).
 
+## Daily processing (`process.pbl`)
+
+```bash
+npm run daily -- list
+npm run daily -- inspect
+npm run daily -- run --seed-ledger --user DEMO
+npm run daily -- endofday --seed-ledger
+npm test
+```
+
+See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md).
+
 ## Layout
 
 - `src/exe/manifest.ts` — library list the EXE would load  
 - `src/config/ini.ts` — `ProfileString`-compatible INI reader  
-- `src/app/cac.ts` / `login.ts` / `frame.ts` / `menu.ts` — ports of recovered PowerScript  
-- `legacy-source/` — normalized extracts from `ALAI/SOURCE/cac.pbl`  
+- `src/app/*` — ports of recovered shell PowerScript  
+- `src/process/*` — daily pipeline (unload skeleton + end-of-day)  
+- `legacy-source/` — recovered PowerScript (`cac.pbl` + key `process.pbl` objects)  
 - `src/db/adapter.ts` — mock DB (wire real ODBC/Postgres later)
 
 ## Extract more legacy source
