@@ -73,8 +73,8 @@ export const DAILY_STAGES: PipelineStage[] = [
     menuId: "m_createlspupload",
     title: "Load LSP records to LSP",
     window: "w_lspupload",
-    status: "pending",
-    notes: "Builds LSP upload from CURRLEDGE / INTINPFL",
+    status: "ported",
+    notes: "CURRLEDGE RECDEST=lsp → UN_mmdd.lsp + INTINPFL; optional SYRNLSPUPLD NLSP",
   },
   {
     id: "glwalker",
@@ -82,7 +82,7 @@ export const DAILY_STAGES: PipelineStage[] = [
     title: "Merge LSP and Non-LSP / Create GLW File",
     window: "w_glwalker",
     status: "ported",
-    notes: "NLSP CURRLEDGE → fixed-width .GLW (H/A/P); LSP GLWDTL merge next",
+    notes: "NLSP CURRLEDGE + LSP GLWDTL → fixed-width .GLW (H/A/P)",
   },
   {
     id: "endofday",

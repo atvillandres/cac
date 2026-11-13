@@ -40,7 +40,7 @@ Write order: control → for each header → matching details (sorted by control
 ## Modern module
 
 - `src/process/pad.ts` — padding helpers  
-- `src/process/glwalker.ts` — NLSP→detail→header→control→file  
+- `src/process/glwalker.ts` — NLSP CURRLEDGE + LSP `GLWDTL` (`glwDtl`) → detail→header→control→file  
 - CLI: `cacentrp daily glwalker [--out dir]`
 
-LSP `GLWDTL` merge remains a follow-up (needs LSP upload / `GLWDTL` feed).
+See also [`docs/lsp-upload.md`](lsp-upload.md) for `.lsp` / `INTINPFL` (separate from `GLWDTL`).

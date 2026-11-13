@@ -10,6 +10,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { CurrLedgeRow } from "./currledge.js";
+import type { GlwDtlStoreRow } from "./store.js";
 import {
   amountToImplied2,
   formatMmDdYy,
@@ -115,6 +116,8 @@ export interface GlwOptions {
   journalNumber?: string;
   bookingRate?: number;
   outDir?: string;
+  /** LSP / GIS detail rows from GLWDTL (wf_lspdetails) */
+  glwDtl?: GlwDtlStoreRow[];
 }
 
 const COMPANY_SUFFIX: Record<GlwCompany, string> = {
@@ -235,6 +238,9 @@ export function currLedgeToDetails(
   const rate = opts.bookingRate ?? 1;
 
   for (const row of rows) {
+    const dest = (row.recDest || "").toLowerCase();
+    // NLSP path — skip LSP-destined ledger rows (those go via GLWDTL)
+    if (dest === "lsp") continue;
     if (row.coCode && row.coCode !== opts.company && !(opts.company === "ALAI" && row.coCode === "ALDC")) {
       // allow unmatched empty coCode through for demos keyed by company filter upstream
       if (row.coCode !== opts.company) continue;
@@ -375,6 +381,76 @@ export function buildControl(headers: GlwHeader[], details: GlwDetail[]): GlwCon
   };
 }
 
+function asMmDdYyyyField(v: string | number, fallback: string): string {
+  if (typeof v === "number") return padLeftZero(v, 8);
+  const s = String(v ?? "").trim();
+  if (/^\d{8}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return formatMmDdYyyy(s);
+  return padLeftZero(s || fallback, 8);
+}
+
+/** Port of wf_lspdetails — map GLWDTL decimal rows into fixed-width detail structs. */
+export function glwDtlToDetails(
+  rows: GlwDtlStoreRow[],
+  company: GlwCompany,
+): GlwDetail[] {
+  const code = companyCodeForFile(company);
+  const details: GlwDetail[] = [];
+  let seq = 0;
+  const blank = "";
+  for (const row of rows) {
+    const cmpy = (row.gwcmpy || "").trim();
+    if (
+      cmpy &&
+      cmpy !== company &&
+      cmpy !== code &&
+      !(company === "ALAI" && (cmpy === "ALAI" || cmpy === "ALDC"))
+    ) {
+      continue;
+    }
+    seq += 1;
+    const unit = (row.gwcntr || "").trim() || "X001";
+    details.push({
+      gwrect: padRightSpace(row.gwrect || "02", 2),
+      gwctle: padRightSpace(row.gwctle, 4),
+      gwgrpn: padRightSpace(row.gwgrpn, 10),
+      gwgrpd: asMmDdYyyyField(row.gwgrpd, "00000000"),
+      gwjrnn: padRightSpace(row.gwjrnn, 20),
+      gwjrnd: asMmDdYyyyField(row.gwjrnd, "00000000"),
+      gwseqn: padLeftZero(row.gwseqn ?? seq, 4),
+      gwfil1: padRightSpace(row.gwfil1 || " ", 1),
+      gwcmpy: padRightSpace(cmpy || code, 7),
+      gwactc: padRightSpace(row.gwactc, 10),
+      gwcurr: padRightSpace(row.gwcurr || "PHP", 3),
+      gwcntr: padRightSpace(unit, 7),
+      gwlobc: padRightSpace(row.gwlobc || "01", 4),
+      gwdccd: padRightSpace(row.gwdccd, 1),
+      gwoamt: amountToImplied2(row.gwoamt, 16),
+      gwlamt: amountToImplied2(row.gwlamt, 16),
+      gwtrnc: padRightSpace(row.gwtrnc || blank, 3),
+      gwref1: padRightSpace(row.gwref1 || blank, 12),
+      gwref2: padRightSpace(row.gwref2 || blank, 12),
+      gwref3: padRightSpace(row.gwref3 || blank, 20),
+      gwref4: padRightSpace(row.gwref4 || blank, 13),
+      gwencs: padRightSpace(row.gwencs || "N", 1),
+      gwrtts: padRightSpace(row.gwrtts || blank, 1),
+      gwstaa: padLeftZero(row.gwstaa ?? 0, 16),
+      gwstav: padRightSpace(row.gwstav || blank, 2),
+      gwadbs: padRightSpace(row.gwadbs || "N", 1),
+      gwdocr: padRightSpace(row.gwdocr || blank, 10),
+      gwrevd: padRightSpace(String(row.gwrevd ?? blank), 8),
+      gwreva: padRightSpace(row.gwreva || blank, 34),
+      gwreve: padRightSpace(row.gwreve || blank, 4),
+      gwrtty: padRightSpace(row.gwrtty || blank, 4),
+      gwxchr: padRightSpace(String(row.gwxchr ?? blank), 15),
+      gwrted: padRightSpace(String(row.gwrted ?? blank), 8),
+      gwsacc: padRightSpace(row.gwsacc || blank, 34),
+      gwfil2: padRightSpace(row.gwfil2 || blank, 1),
+    });
+  }
+  return details;
+}
+
 export interface GlwResult {
   ok: boolean;
   company: GlwCompany;
@@ -400,7 +476,7 @@ export function runGlWalker(
     (r) => !r.coCode || r.coCode === options.company || (options.company === "ALAI" && r.coCode === "ALDC"),
   );
 
-  const details = currLedgeToDetails(filtered, {
+  const nlspDetails = currLedgeToDetails(filtered, {
     company: options.company,
     controlCode,
     groupNumber,
@@ -408,6 +484,8 @@ export function runGlWalker(
     processDate,
     bookingRate: options.bookingRate,
   });
+  const lspDetails = glwDtlToDetails(options.glwDtl ?? [], options.company);
+  const details = [...nlspDetails, ...lspDetails];
 
   if (details.length === 0) {
     return {
@@ -418,7 +496,7 @@ export function runGlWalker(
       headerCount: 0,
       detailCount: 0,
       lines: [],
-      detail: `No CURRLEDGE rows for ${options.company}`,
+      detail: `No CURRLEDGE/GLWDTL rows for ${options.company}`,
     };
   }
 
@@ -454,7 +532,7 @@ export function runGlWalker(
     headerCount: headers.length,
     detailCount: details.length,
     lines,
-    detail: `Wrote ${headers.length} header(s), ${details.length} detail(s) → ${filename}`,
+    detail: `Wrote ${headers.length} header(s), ${details.length} detail(s) (nlsp=${nlspDetails.length} lsp=${lspDetails.length}) → ${filename}`,
   };
 }
 
