@@ -58,7 +58,15 @@ export const DAILY_STAGES: PipelineStage[] = [
     title: "CDR accounting entry mapping",
     window: "w_cdrinterfaceprocess",
     status: "ported",
-    notes: "APTRANS/APDEPOSIT ⋈ ACCTENT → CURRLEDGE (CD)",
+    notes: "APTRANS/APDEPOSIT (wf_write2aptrans/apdep) ⋈ ACCTENT → CURRLEDGE (CD)",
+  },
+  {
+    id: "cdr-tranext",
+    menuId: "(from w_unload CDR)",
+    title: "CDR TRANEXT APTRANS/APDEP loaders",
+    window: "w_unload wf_write2aptrans/apdep",
+    status: "ported",
+    notes: "ACCTTYPE remaps, date checks, optional ACCTENT gate → apTrans/apDeposits",
   },
   {
     id: "manual-load",

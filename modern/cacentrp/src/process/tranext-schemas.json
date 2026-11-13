@@ -1059,6 +1059,101 @@
     ],
     "recordLength": 68
   },
+  "APTRANS": {
+    "fields": [
+      {
+        "name": "COUNTER",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "ACCTTYPE",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "REGION",
+        "type": "C",
+        "length": 4
+      },
+      {
+        "name": "LOB",
+        "type": "C",
+        "length": 4
+      },
+      {
+        "name": "DOCNUM",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DOCDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "DOCTYPE",
+        "type": "C",
+        "length": 5
+      },
+      {
+        "name": "REFDOC",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "PAYOR",
+        "type": "C",
+        "length": 50
+      },
+      {
+        "name": "AMOUNT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PAYTYPE",
+        "type": "C",
+        "length": 4
+      },
+      {
+        "name": "PAYPYTYP",
+        "type": "C",
+        "length": 2
+      }
+    ],
+    "recordLength": 145
+  },
+  "APDEP": {
+    "fields": [
+      {
+        "name": "BANKACCT",
+        "type": "C",
+        "length": 16
+      },
+      {
+        "name": "DEPDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "TRANDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "DEPCHKNO",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "AMOUNT",
+        "type": "N",
+        "length": 16
+      }
+    ],
+    "recordLength": 69
+  },
   "RC1": {
     "fields": [
       {

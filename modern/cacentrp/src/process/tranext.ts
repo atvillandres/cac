@@ -171,6 +171,12 @@ export interface Write2Context {
   foCode: string;
   userId: string;
   processDate?: string;
+  /** FO file date (ldt_filedate) for CDR date checks */
+  fileDate?: string;
+  /** Optional ACCTENT.TRANTYPE allow-list (coCode|tranType). When set, unknown types reject. */
+  acctEntTypes?: Set<string>;
+  /** SYRUNIT map `COCODE|ROCODE` → UNIT */
+  units?: Record<string, string>;
 }
 
 export interface Write2Result {
@@ -895,6 +901,227 @@ export function write2Ob(
   return { code: "OB", ok: true, read: rows.length, written, rejected: 0, detail: `LAPPLNOHIST +${written}` };
 }
 
+/**
+ * Port of APTRANS ACCTTYPE remaps in wf_write2aptrans
+ * (loading/handling NB split, group payment, BRS commission).
+ * Returns null when the row should be skipped (RGI-Discount / old CAC).
+ */
+export function remapApTransAcctType(
+  acctTypeIn: string,
+  opts: {
+    payPyTyp?: string;
+    refDoc?: string;
+    foCode?: string;
+  },
+): string | null {
+  let acct = acctTypeIn.trim();
+  const payPy = (opts.payPyTyp ?? "").trim().toUpperCase();
+  const ref = (opts.refDoc ?? "").trim();
+  const fo = (opts.foCode ?? "").trim().toUpperCase();
+
+  if ((acct === "10009" || acct === "10010") && payPy !== "NB") acct = "10003";
+  if ((acct === "10021" || acct === "10022") && payPy !== "NB") acct = "10084";
+  if (acct === "10019" || acct === "10020") {
+    if (payPy === "NB") acct = "10021";
+    else if (ref.slice(0, 1).toUpperCase() === "S") acct = "100GS";
+  }
+  if (fo === "BRS") {
+    const brsMap: Record<string, string> = {
+      "20023": "20029",
+      "20024": "20030",
+      "20025": "20027",
+      "20026": "20028",
+      "20005": "20031",
+      "20006": "20032",
+    };
+    if (brsMap[acct]) acct = brsMap[acct]!;
+  }
+  if (acct === "10082" || acct === "10083") return null;
+  if (["10076", "10077", "10078", "10079", "10080"].includes(acct)) return null;
+  return acct;
+}
+
+function hasAcctEnt(ctx: Write2Context, tranType: string): boolean {
+  if (!ctx.acctEntTypes) return true;
+  return (
+    ctx.acctEntTypes.has(`${ctx.company}|${tranType}`) ||
+    ctx.acctEntTypes.has(tranType)
+  );
+}
+
+function resolveUnit(ctx: Write2Context, region: string, actualReg: string): string {
+  const units = ctx.units ?? {};
+  const tryKeys = [
+    `${ctx.company}|${actualReg}`,
+    `${ctx.company}|${region}`,
+  ];
+  for (const k of tryKeys) {
+    if (units[k]) return units[k]!;
+  }
+  if (region.toUpperCase() === "BRS" || ctx.foCode.toUpperCase() === "BRS") return "A000";
+  return units[`${ctx.company}|${ctx.foCode}`] ?? "";
+}
+
+/** Port of wf_write2aptrans → APTRANS working table. */
+export function write2Aptrans(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  const fileDate = ctx.fileDate ?? today;
+  let written = 0;
+  let rejected = 0;
+  for (const row of rows) {
+    const counter = num(row, "COUNTER");
+    const docNum = str(row, "DOCNUM");
+    const docDate = str(row, "DOCDATE") || today;
+    const payPyTyp = str(row, "PAYPYTYP");
+    const refDoc = str(row, "REFDOC").slice(0, 10);
+    const region = str(row, "REGION") || ctx.foCode;
+    const actualReg = region;
+    const remapped = remapApTransAcctType(str(row, "ACCTTYPE"), {
+      payPyTyp,
+      refDoc,
+      foCode: ctx.foCode,
+    });
+    if (remapped == null) {
+      rejected++;
+      continue;
+    }
+    if (docDate > fileDate) {
+      rejected++;
+      continue;
+    }
+    if (!hasAcctEnt(ctx, remapped)) {
+      rejected++;
+      continue;
+    }
+    const unit = resolveUnit(ctx, region, actualReg);
+    store.apTrans.push({
+      counter,
+      company: ctx.company,
+      region: ctx.foCode,
+      lob: str(row, "LOB"),
+      docNum,
+      docDate,
+      docType: str(row, "DOCTYPE"),
+      refDoc,
+      payor: str(row, "PAYOR"),
+      acctType: remapped,
+      amount: num(row, "AMOUNT"),
+      payType: str(row, "PAYTYPE"),
+      payPyTyp,
+      unit,
+      processDate: today,
+    });
+    written++;
+  }
+  return {
+    code: "APTRANS",
+    ok: true,
+    read: rows.length,
+    written,
+    rejected,
+    detail: `APTRANS +${written}` + (rejected ? ` reject=${rejected}` : ""),
+  };
+}
+
+/** Port of wf_write2apdep → APDEPOSIT working table. */
+export function write2Apdep(
+  store: DailyStore,
+  rows: Record<string, string | number>[],
+  ctx: Write2Context,
+): Write2Result {
+  const today = todayOf(ctx);
+  const fileDate = ctx.fileDate ?? today;
+  let written = 0;
+  let rejected = 0;
+  for (const row of rows) {
+    const bankAcct = str(row, "BANKACCT");
+    const depDate = str(row, "DEPDATE") || today;
+    const tranDate = str(row, "TRANDATE") || today;
+    const depChkNo = str(row, "DEPCHKNO");
+    const payType = depChkNo ? "CHK" : "CSH";
+    if (depDate > tranDate || tranDate > fileDate) {
+      rejected++;
+      continue;
+    }
+    if (!hasAcctEnt(ctx, bankAcct)) {
+      rejected++;
+      continue;
+    }
+    store.apDeposits.push({
+      company: ctx.company,
+      bdoCode: ctx.foCode,
+      bankAcct,
+      depDate,
+      tranDate,
+      amount: num(row, "AMOUNT"),
+      payType,
+      depChkNo: depChkNo || undefined,
+      processDate: today,
+    });
+    written++;
+  }
+  return {
+    code: "APDEP",
+    ok: true,
+    read: rows.length,
+    written,
+    rejected,
+    detail: `APDEPOSIT +${written}` + (rejected ? ` reject=${rejected}` : ""),
+  };
+}
+
+/** Demo CDR TRANEXT rows matching DEMO_ACCTENT (AP / CASH+PREM+BNK001). */
+export function demoApTransRows(): Record<string, string | number>[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return [
+    {
+      COUNTER: 1,
+      ACCTTYPE: "CASH",
+      REGION: "080",
+      LOB: "01",
+      DOCNUM: "AP000001",
+      DOCDATE: today,
+      DOCTYPE: "OR",
+      REFDOC: "",
+      PAYOR: "DEMO",
+      AMOUNT: 2500,
+      PAYTYPE: "CSH",
+      PAYPYTYP: "",
+    },
+    {
+      COUNTER: 2,
+      ACCTTYPE: "PREM",
+      REGION: "080",
+      LOB: "01",
+      DOCNUM: "AP000001",
+      DOCDATE: today,
+      DOCTYPE: "OR",
+      REFDOC: "",
+      PAYOR: "DEMO",
+      AMOUNT: 2500,
+      PAYTYPE: "",
+      PAYPYTYP: "",
+    },
+  ];
+}
+
+export function demoApDepRows(): Record<string, string | number>[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return [
+    {
+      BANKACCT: "BNK001",
+      DEPDATE: today,
+      TRANDATE: today,
+      DEPCHKNO: "",
+      AMOUNT: 2500,
+    },
+  ];
+}
+
 /** ImportFile + wf_write2* for one TRANEXT code. */
 export function write2TranextCode(
   store: DailyStore,
@@ -948,6 +1175,10 @@ export function write2TranextCode(
       return write2Oa(store, rows, ctx);
     case "OB":
       return write2Ob(store, rows, ctx);
+    case "APTRANS":
+      return write2Aptrans(store, rows, ctx);
+    case "APDEP":
+      return write2Apdep(store, rows, ctx);
     case "FO_TCDBF":
       return write2FoControl(store, rows);
     default:
@@ -1038,6 +1269,9 @@ export interface TranextLoadInput {
   foCode: string;
   userId: string;
   processDate?: string;
+  fileDate?: string;
+  acctEntTypes?: Set<string>;
+  units?: Record<string, string>;
   /** Limit to these codes (basename without .DBF). Default: all *.DBF in dir. */
   codes?: string[];
 }
@@ -1055,6 +1289,9 @@ export function runTranextLoad(store: DailyStore, input: TranextLoadInput): Tran
     foCode: input.foCode,
     userId: input.userId,
     processDate: input.processDate,
+    fileDate: input.fileDate,
+    acctEntTypes: input.acctEntTypes,
+    units: input.units,
   };
   const results: Write2Result[] = [];
 

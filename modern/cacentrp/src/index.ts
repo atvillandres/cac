@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
+ *   cacentrp daily list|inspect|run|unload|tranext|aptrans|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -33,7 +33,13 @@ import { buildDemoAliContent, runBrsUpload } from "./process/brs.js";
 import { demoBpyRows, runBpyMapping } from "./process/bpy.js";
 import { demoGrpRows, runGrpMapping } from "./process/grp.js";
 import { DEMO_ACCTENT } from "./process/fixtures.js";
-import { runTranextLoad } from "./process/tranext.js";
+import {
+  demoApDepRows,
+  demoApTransRows,
+  runTranextLoad,
+  write2Apdep,
+  write2Aptrans,
+} from "./process/tranext.js";
 import type { AppContext, Variant } from "./types.js";
 import { mkdirSync, writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -44,7 +50,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
+  cacentrp daily <list|inspect|run|unload|tranext|aptrans|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -367,11 +373,38 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
+  if (opts.cmd === "aptrans" || opts.cmd === "apdep") {
+    const store = createStore();
+    const ctx = {
+      company: "AP",
+      foCode: "080",
+      userId: opts.userId,
+      units: { "AP|080": "M001" },
+    };
+    const t = write2Aptrans(store, demoApTransRows(), ctx);
+    const d = write2Apdep(store, demoApDepRows(), ctx);
+    console.log(`${t.ok ? "OK" : "!!"} [${t.code}] ${t.detail}`);
+    console.log(`${d.ok ? "OK" : "!!"} [${d.code}] ${d.detail}`);
+    console.log(`APTRANS=${store.apTrans.length} APDEPOSIT=${store.apDeposits.length}`);
+    for (const row of store.apTrans) {
+      console.log(`  ${row.docNum} ${row.acctType} ${row.amount} unit=${row.unit ?? ""}`);
+    }
+    return;
+  }
+
   if (opts.cmd === "cdr") {
     const store = createStore();
     const input = demoCdrInput(opts.userId);
-    store.apTrans = (input.apTrans ?? []).map((t) => ({ ...t }));
-    store.apDeposits = (input.apDeposits ?? []).map((d) => ({ ...d }));
+    const ctx = {
+      company: input.proc.compCode,
+      foCode: input.proc.foCode,
+      userId: opts.userId,
+      units: { "AP|080": "M001" },
+    };
+    write2Aptrans(store, demoApTransRows(), ctx);
+    write2Apdep(store, demoApDepRows(), ctx);
+    input.apTrans = store.apTrans.map((t) => ({ ...t }));
+    input.apDeposits = store.apDeposits.map((d) => ({ ...d }));
     store.bdoApMst.push({
       company: "AP",
       bdoCode: "080",
@@ -518,7 +551,7 @@ function runDailyCommand(argv: string[]) {
   }
 
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|unload|tranext|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|unload|tranext|aptrans|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
   );
 }
 

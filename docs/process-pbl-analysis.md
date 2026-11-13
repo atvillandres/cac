@@ -57,7 +57,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - BRS `.ALI` upload — see [`docs/brs-upload.md`](brs-upload.md)
 - BPY DBF mapping — see [`docs/bpy-mapping.md`](bpy-mapping.md)
 - SSI/GRP DBF mapping — see [`docs/grp-ssi-mapping.md`](grp-ssi-mapping.md)
-- TRANEXT DBF ImportFile + typed CS/DA/RA/FO_TCDBF writers — see [`docs/tranext.md`](tranext.md)
+- TRANEXT DBF ImportFile + typed CS/DA/RA–RF/VA–VH/RC1/VI/HA/OA/OB + APTRANS/APDEP — see [`docs/tranext.md`](tranext.md)
 - Object inventory (166 source objects)
 
-Next slice: typed APTRANS/APDEP writers (if not merged), or ALAI FOCUS (`w_alaifocusproc`) polish.
+Next slice: ALAI FOCUS (`w_alaifocusproc`) polish.
