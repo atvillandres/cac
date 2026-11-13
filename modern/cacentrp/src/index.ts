@@ -4,7 +4,7 @@
  *
  * Commands:
  *   cacentrp [login options]           App open → login → frame
- *   cacentrp daily list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
+ *   cacentrp daily list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -43,7 +43,7 @@ const PKG_ROOT = resolve(HERE, "..");
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
-  cacentrp daily <list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
+  cacentrp daily <list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp> [daily-options]
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
@@ -60,6 +60,8 @@ Daily options:
   --inbound <path>        Inbound BPY/GRP DBF or BRS .ALI file/dir (repeatable)
   --message-subject <s>   Synthetic mail subject (with --message-file)
   --message-file <path>   Synthetic mail attachment path
+  --map                  Invoke FOCUS/CDR/BPY/GRP after unload (default)
+  --no-map               Classify/load only; skip downstream mappers
   --no-glwalker           End-of-day refuses unless GL Walker confirmed
   --no-archive            End-of-day cancel confirm
   --out <dir>             Output directory for glwalker .GLW / lspupload .lsp trees
@@ -101,6 +103,7 @@ function parseDailyArgs(argv: string[]) {
     inbound: string[];
     messageSubject?: string;
     messageFiles: string[];
+    mapDownstream: boolean;
     glWalkerDone: boolean;
     confirmArchive: boolean;
     outDir?: string;
@@ -110,6 +113,7 @@ function parseDailyArgs(argv: string[]) {
     seedLedger: false,
     inbound: [],
     messageFiles: [],
+    mapDownstream: true,
     glWalkerDone: true,
     confirmArchive: true,
   };
@@ -121,6 +125,8 @@ function parseDailyArgs(argv: string[]) {
     else if (a === "--inbound") opts.inbound.push(argv[++i]!);
     else if (a === "--message-subject") opts.messageSubject = argv[++i];
     else if (a === "--message-file") opts.messageFiles.push(argv[++i]!);
+    else if (a === "--map") opts.mapDownstream = true;
+    else if (a === "--no-map") opts.mapDownstream = false;
     else if (a === "--no-glwalker") opts.glWalkerDone = false;
     else if (a === "--no-archive") opts.confirmArchive = false;
     else if (a === "--out") opts.outDir = resolve(argv[++i]!);
@@ -246,6 +252,7 @@ function runDailyCommand(argv: string[]) {
         opts.inbound.length > 0
           ? opts.inbound
           : ["C:\\tci\\inbound\\0806BPY.DBF", "C:\\tci\\inbound\\0806GRP.DBF"],
+      mapDownstream: opts.mapDownstream,
       endOfDay: {
         glWalkerDone: opts.glWalkerDone,
         confirmArchive: opts.confirmArchive,
@@ -259,6 +266,12 @@ function runDailyCommand(argv: string[]) {
     console.log(
       `focus=${result.unload?.focusFiles} cdr=${result.unload?.cdrFiles} brs=${result.unload?.brsFiles} ssi=${result.unload?.ssiFiles}`,
     );
+    const m = result.unload?.mapped;
+    if (m) {
+      console.log(
+        `mapped focus=${m.focusRows} cdr=${m.cdrRows} bpy=${m.bpyRows} grp=${m.grpRows}`,
+      );
+    }
     console.log(`BDOAPMST rows=${result.store.bdoApMst.length}`);
     console.log("\n=== End of Day ===");
     console.log(result.endOfDay?.message);
@@ -268,17 +281,34 @@ function runDailyCommand(argv: string[]) {
     return;
   }
 
-  // also support a bare unload demo via detectInboundKind for clarity
   if (opts.cmd === "unload") {
     const store = createStore();
+    const inbound =
+      opts.inbound.length > 0
+        ? opts.inbound.map((path) => ({ path, kind: detectInboundKind(path) }))
+        : [
+            { path: "C:\\tci\\inbound\\0806BPY.DBF", kind: detectInboundKind("0806BPY.DBF") },
+            { path: "C:\\tci\\inbound\\0806GRP.DBF", kind: detectInboundKind("0806GRP.DBF") },
+          ];
     const unload = runUnload(store, {
       userId: opts.userId,
       messages,
-      inbound: opts.inbound.map((path) => ({ path, kind: detectInboundKind(path) })),
+      inbound,
+      mapDownstream: opts.mapDownstream,
     });
     for (const log of unload.logs) {
       console.log(`${log.ok ? "OK" : "!!"} [${log.step}] ${log.detail}`);
     }
+    console.log(
+      `focus=${unload.focusFiles} cdr=${unload.cdrFiles} brs=${unload.brsFiles} ssi=${unload.ssiFiles}`,
+    );
+    console.log(
+      `mapped focus=${unload.mapped.focusRows} cdr=${unload.mapped.cdrRows} bpy=${unload.mapped.bpyRows} grp=${unload.mapped.grpRows}`,
+    );
+    if (unload.tranextPlan.length) {
+      console.log(`tranext plan: ${unload.tranextPlan.join(",")}`);
+    }
+    console.log(`CURRLEDGE=${store.currLedge.length}`);
     return;
   }
 
@@ -452,7 +482,7 @@ function runDailyCommand(argv: string[]) {
   }
 
   throw new Error(
-    `Unknown daily command: ${opts.cmd} (use list|inspect|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
+    `Unknown daily command: ${opts.cmd} (use list|inspect|run|unload|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp)`,
   );
 }
 

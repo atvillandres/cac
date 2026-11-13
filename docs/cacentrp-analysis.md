@@ -49,6 +49,6 @@ Display name: **CAC Enterprise** — *Centralized Accounting Channel (Enterprise
 | INI profile loader | Done |
 | Login + frame bootstrap | Done (mock DB) |
 | Menu tree from `cac_menu.srm` | Done |
-| `process` / `report` / `lextract` business logic | Next |
+| Daily process (unload→FOCUS/CDR/BPY/GRP→BRS→LSP→GLW→EOD) | In progress — see `docs/process-pbl-analysis.md` |
 
 Use `tools/pbl_extract.py` to dump further SOURCE `.pbl` libraries.
