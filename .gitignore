@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+legacy/cac entrp/**/*.dll
+legacy/cac entrp/**/*.pbd
+legacy/cac entrp/**/*.pbl
+legacy/cac entrp/**/*.exe
+extracted/**/*.win
+extracted/**/*.men
+extracted/**/*.dwo
+extracted/**/*.apl
+extracted/**/*.prp
+extracted/**/ob.exe

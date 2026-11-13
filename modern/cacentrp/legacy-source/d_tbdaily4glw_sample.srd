@@ -1,0 +1,56 @@
+release 7;
+datawindow(units=0 timer_interval=0 color=15793151 processing=0 HTMLDW=no print.documentname="" print.orientation = 0 print.margin.left = 110 print.margin.right = 110 print.margin.top = 100 print.margin.bottom = 200 print.paper.source = 0 print.paper.size = 0 print.prompt=no print.buttons=no print.preview.buttons=no )
+header(height=524 color="536870912" )
+summary(height=88 color="536870912" )
+footer(height=0 color="536870912" )
+detail(height=0 color="536870912" )
+table(column=(type=char(3) updatewhereclause=yes name=focode dbname="FOCODE" )
+ column=(type=date updatewhereclause=yes name=refdate dbname="REFDATE" )
+ column=(type=date updatewhereclause=yes name=processdate dbname="PROCESSDATE" )
+ column=(type=char(20) updatewhereclause=yes name=acctcode dbname="ACCTCODE" )
+ column=(type=char(2) updatewhereclause=yes name=drcr dbname="DRCR" )
+ column=(type=decimal(2) updatewhereclause=yes name=amount dbname="AMOUNT" )
+ column=(type=char(4) updatewhereclause=yes name=cocode dbname="COCODE" )
+ column=(type=char(4) updatewhereclause=yes name=recdest dbname="RECDEST" )
+ retrieve="  SELECT ~"CURRLEDGE~".~"FOCODE~",   
+         ~"CURRLEDGE~".~"REFDATE~",   
+         ~"CURRLEDGE~".~"PROCESSDATE~",   
+         ~"CURRLEDGE~".~"ACCTCODE~",   
+         ~"CURRLEDGE~".~"DRCR~",   
+         ~"CURRLEDGE~".~"AMOUNT~",   
+         ~"CURRLEDGE~".~"COCODE~",   
+         ~"CURRLEDGE~".~"RECDEST~"  
+    FROM ~"CURRLEDGE~"  
+   WHERE  ~"CURRLEDGE~".~"PROCESSDATE~" between :ldt_fromdate AND :ldt_todate    
+" arguments=(("ldt_fromdate", date),("ldt_todate", date))  sort="focode A refdate A recdest D acctcode A " )
+group(level=1 header.height=0 trailer.height=0 by=("focode" ) header.color="536870912" trailer.color="536870912" )
+group(level=2 header.height=0 trailer.height=0 by=("focode" , "refdate" ) header.color="536870912" trailer.color="536870912" )
+group(level=3 header.height=0 trailer.height=0 by=("focode" , "refdate" , "recdest" ) header.color="536870912" trailer.color="536870912" )
+group(level=4 header.height=0 trailer.height=0 by=("focode" , "refdate" , "recdest" , "acctcode" ) header.color="536870912" trailer.color="536870912" )
+text(band=header alignment="0" text="Centralized Accounting Channel System" border="0" color="0" x="69" y="48" height="64" width="1714"  name=t_7  font.face="Courier New" font.height="-10" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" font.italic="1" background.mode="1" background.color="553648127" )
+text(band=header alignment="0" text="Daily Summary" border="0" color="0" x="69" y="124" height="64" width="1714"  name=t_8  font.face="Courier New" font.height="-10" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+compute(band=header alignment="0" expression="'From ' + string(  ldt_fromdate , 'mm/dd/yyyy' ) + ' to ' + string(  ldt_todate , 'mm/dd/yyyy' )"border="0" color="0" x="69" y="204" height="64" width="1714" format="[GENERAL]"  name=compute_5  font.face="Courier New" font.height="-10" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+compute(band=header alignment="1" expression="'Page ' + string(page(), '#,##0' ) + ' of ' + string( pageCount(), '#,##0')"border="0" color="0" x="2574" y="288" height="64" width="891" format="[GENERAL]"  name=compute_12  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+line(band=header x1="2889" y1="512" x2="3479" y2="512"  name=l_10 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+line(band=header x1="1664" y1="512" x2="2254" y2="512"  name=l_6 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+line(band=header x1="2277" y1="512" x2="2866" y2="512"  name=l_7 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+text(band=header alignment="2" text="Code" border="0" color="0" x="1317" y="444" height="56" width="320"  name=t_1  font.face="Courier New" font.height="-9" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+text(band=header alignment="2" text="Debit" border="0" color="0" x="1664" y="444" height="56" width="590"  name=t_3  font.face="Courier New" font.height="-9" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+text(band=header alignment="2" text="Credit" border="0" color="0" x="2277" y="444" height="56" width="590"  name=t_4  font.face="Courier New" font.height="-9" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+text(band=header alignment="2" text="Ending Bal." border="0" color="0" x="2885" y="444" height="56" width="590"  name=t_6  font.face="Courier New" font.height="-9" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+line(band=header x1="1317" y1="512" x2="1637" y2="512"  name=l_4 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+text(band=header alignment="2" text="Account Description" border="0" color="0" x="101" y="444" height="56" width="1193"  name=t_2  font.face="Courier New" font.height="-9" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+line(band=header x1="55" y1="512" x2="1294" y2="508"  name=l_5 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+column(band=detail id=6 alignment="1" tabsequence=32766 border="0" color="0" x="713" y="4" height="48" width="329" format="[general]"  name=amount edit.limit=0 edit.case=any edit.autoselect=yes edit.autohscroll=yes  font.face="Courier New" font.height="-8" font.weight="400"  font.family="2" font.pitch="2" font.charset="0" background.mode="1" background.color="536870912" )
+compute(band=detail alignment="0" expression="if(  ( drcr = 'DR' and  amount > 0 ) or ( drcr = 'CR' and amount < 0), abs(  amount ), 0 )"border="0" color="0" x="1755" y="12" height="48" width="398" format="#,##0.00"  name=debit_compute  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+compute(band=detail alignment="0" expression="if(  ( drcr = 'CR' and  amount > 0 ) or ( drcr = 'DR' and amount < 0), abs(  amount ), 0 )"border="0" color="0" x="2185" y="16" height="48" width="398" format="#,##0.00"  name=credit_compute  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+column(band=detail id=8 alignment="0" tabsequence=32766 border="0" color="0" x="3342" y="4" height="48" width="110" format="[general]"  name=recdest edit.limit=0 edit.case=any edit.autoselect=yes  font.face="Courier New" font.height="-8" font.weight="700"  font.family="2" font.pitch="2" font.charset="0" background.mode="1" background.color="536870912" )
+line(band=summary x1="1673" y1="84" x2="3470" y2="84"  name=l_9 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+line(band=summary x1="1673" y1="72" x2="3470" y2="68"  name=l_8 pen.style="0" pen.width="9" pen.color="0"  background.mode="2" background.color="16777215" )
+text(band=summary alignment="1" text="Grand Total: " border="0" color="0" x="1161" y="8" height="48" width="475"  name=t_5  font.face="Courier New" font.height="-8" font.weight="700"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="553648127" )
+compute(band=summary alignment="1" expression="sum(  debit_compute  for all )"border="0" color="0" x="1664" y="8" height="48" width="590" format="#,##0.00"  name=grandtotal_debit  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+compute(band=summary alignment="1" expression="sum(   credit_compute  for all )"border="0" color="0" x="2277" y="8" height="48" width="590" format="#,##0.00"  name=grandtotal_credit  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+compute(band=summary alignment="1" expression="round( grandtotal_debit, 2 )  -   round( grandtotal_credit, 2 )"border="0" color="0" x="2889" y="8" height="48" width="590" format="#,##0.00;(#,##0.00)"  name=compute_4  font.face="Courier New" font.height="-8" font.weight="400"  font.family="1" font.pitch="1" font.charset="0" background.mode="1" background.color="536870912" )
+htmltable(border="1" )
+htmlgen(clientevents="1" clientvalidation="1" clientcomputedfields="1" clientformatting="0" clientscriptable="0" generatejavascript="1" )
+  
