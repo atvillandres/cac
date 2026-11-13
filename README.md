@@ -12,4 +12,9 @@ Legacy archive: `cac entrp.zip` — Sybase **PowerBuilder 7** desktop app (**CAC
 cd modern/cacentrp && npm install && npm run build
 node dist/index.js --inspect
 node dist/index.js --variant ALAI --user DEMO --password demo --skip-cleanup
+node dist/index.js daily list
+node dist/index.js daily run --seed-ledger
+npm test
 ```
+
+Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md).

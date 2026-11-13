@@ -1,0 +1,1062 @@
+{
+  "CS": {
+    "fields": [
+      {
+        "name": "FO_NO",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CASHBAL",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "TRAN_DATE",
+        "type": "D",
+        "length": 8
+      }
+    ],
+    "recordLength": 28
+  },
+  "DA": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DSSEQNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DATEDEP",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "DSTYPE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "BANKACCTNO",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "BANKCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "BANKBRANCH",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ACCTCODE",
+        "type": "C",
+        "length": 12
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DSAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DSDEPOSITO",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "USERID",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DATESTAMP",
+        "type": "D",
+        "length": 8
+      }
+    ],
+    "recordLength": 113
+  },
+  "FO_TCDBF": {
+    "fields": [
+      {
+        "name": "TC_NAME",
+        "type": "C",
+        "length": 12
+      },
+      {
+        "name": "TC_SIZE",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "TC_DATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "TC_TIME",
+        "type": "C",
+        "length": 8
+      },
+      {
+        "name": "TC_COUNT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "TC_STATUS",
+        "type": "C",
+        "length": 18
+      },
+      {
+        "name": "TC_MODET",
+        "type": "C",
+        "length": 2
+      },
+      {
+        "name": "TC_TRNDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "TC_CONTROL",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "TC_HASH",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "TC_FILE",
+        "type": "N",
+        "length": 16
+      }
+    ],
+    "recordLength": 137
+  },
+  "RA": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "ORSTATCODE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "ORSTATDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "PROCESSTYP",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "RECVNAME",
+        "type": "C",
+        "length": 60
+      },
+      {
+        "name": "RECVADDR1",
+        "type": "C",
+        "length": 30
+      },
+      {
+        "name": "RECVADDR2",
+        "type": "C",
+        "length": 30
+      },
+      {
+        "name": "RECVADDR3",
+        "type": "C",
+        "length": 90
+      },
+      {
+        "name": "USERID",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DATESTAMP",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "VARPOL",
+        "type": "C",
+        "length": 1
+      }
+    ],
+    "recordLength": 261
+  },
+  "RB": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PRODCODE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "POLNO",
+        "type": "C",
+        "length": 12
+      },
+      {
+        "name": "PTD",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "APPLNO",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "ENTNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "CLIENTNAME",
+        "type": "C",
+        "length": 60
+      },
+      {
+        "name": "AGTNO",
+        "type": "C",
+        "length": 9
+      },
+      {
+        "name": "SRVFOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "PAYMODE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "PLANCODE",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "AGCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "MODALPREM",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PAYCODE",
+        "type": "C",
+        "length": 2
+      },
+      {
+        "name": "DUEDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "ISSUEDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "AGTNAME",
+        "type": "C",
+        "length": 31
+      }
+    ],
+    "recordLength": 225
+  },
+  "RC": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "ITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PAYTYPE",
+        "type": "C",
+        "length": 15
+      },
+      {
+        "name": "ORITEMAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DUEDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "SSIYRMM",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "REMARKS",
+        "type": "C",
+        "length": 30
+      },
+      {
+        "name": "POSTTAG",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "ORITEMDTLT",
+        "type": "C",
+        "length": 1
+      }
+    ],
+    "recordLength": 133
+  },
+  "RD": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CASHAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DSSEQNO",
+        "type": "C",
+        "length": 10
+      }
+    ],
+    "recordLength": 51
+  },
+  "RE": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CHECKITEMN",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "CHECKNO",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "CHECKDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CHECKAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "CHECKCLRTY",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DSSEQNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "CHECKTYPE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "CHECKTYPED",
+        "type": "C",
+        "length": 25
+      },
+      {
+        "name": "BANKBRANCH",
+        "type": "C",
+        "length": 25
+      }
+    ],
+    "recordLength": 147
+  },
+  "RF": {
+    "fields": [
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "ORDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "APRNO",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "APRDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "APRAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "WITHHELDTA",
+        "type": "C",
+        "length": 1
+      }
+    ],
+    "recordLength": 53
+  },
+  "VA": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "DISSTATCOD",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISSTATDAT",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "USERID",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DATESTAMP",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      }
+    ],
+    "recordLength": 60
+  },
+  "VB": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PRODCODE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "AGTNO",
+        "type": "C",
+        "length": 9
+      },
+      {
+        "name": "POLNO",
+        "type": "C",
+        "length": 12
+      },
+      {
+        "name": "CLIENTNAME",
+        "type": "C",
+        "length": 60
+      },
+      {
+        "name": "UNITCODE",
+        "type": "C",
+        "length": 4
+      },
+      {
+        "name": "ENTNO",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "PTD",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "SRVFOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "TIN",
+        "type": "C",
+        "length": 30
+      },
+      {
+        "name": "AGCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "ISSUEDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "AGTNAME",
+        "type": "C",
+        "length": 31
+      },
+      {
+        "name": "PLANCODE",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "PAYMODE",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "PAYCODE",
+        "type": "C",
+        "length": 2
+      },
+      {
+        "name": "SITCODE",
+        "type": "C",
+        "length": 2
+      },
+      {
+        "name": "ORNO",
+        "type": "C",
+        "length": 10
+      }
+    ],
+    "recordLength": 235
+  },
+  "VC": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "ITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISTYPE",
+        "type": "C",
+        "length": 15
+      },
+      {
+        "name": "DISAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISNETAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISRECAPTA",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISCOMMRAT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISCOMMTYP",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISSALECOM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISEXPL",
+        "type": "C",
+        "length": 30
+      },
+      {
+        "name": "ITEMDTLDAT",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "DISITEMDTL",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "CHKCLRDAYS",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "UNITCODE",
+        "type": "C",
+        "length": 4
+      }
+    ],
+    "recordLength": 180
+  },
+  "VD": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "ITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISTYPE",
+        "type": "C",
+        "length": 15
+      },
+      {
+        "name": "ADDCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISADDAMT",
+        "type": "N",
+        "length": 16
+      }
+    ],
+    "recordLength": 89
+  },
+  "VE": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "ITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "DISTYPE",
+        "type": "C",
+        "length": 15
+      },
+      {
+        "name": "DEDCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISDEDAMT",
+        "type": "N",
+        "length": 16
+      }
+    ],
+    "recordLength": 89
+  },
+  "VF": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "SEQNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CASHAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PAYEE",
+        "type": "C",
+        "length": 60
+      }
+    ],
+    "recordLength": 118
+  },
+  "VG": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "CHECKITEMN",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "CHECKNO",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "CHECKDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "BANKCODE",
+        "type": "C",
+        "length": 20
+      },
+      {
+        "name": "BANKBRANCH",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "CURNCYCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "CHECKAMT",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "PAYEE",
+        "type": "C",
+        "length": 61
+      }
+    ],
+    "recordLength": 177
+  },
+  "VH": {
+    "fields": [
+      {
+        "name": "FOCODE",
+        "type": "C",
+        "length": 3
+      },
+      {
+        "name": "DISFORM",
+        "type": "C",
+        "length": 1
+      },
+      {
+        "name": "DISNO",
+        "type": "C",
+        "length": 10
+      },
+      {
+        "name": "DISDATE",
+        "type": "D",
+        "length": 8
+      },
+      {
+        "name": "GRPITEMNO",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "BASERIDERC",
+        "type": "C",
+        "length": 2
+      },
+      {
+        "name": "PLANCODE",
+        "type": "C",
+        "length": 6
+      },
+      {
+        "name": "TOTMODPREM",
+        "type": "N",
+        "length": 16
+      },
+      {
+        "name": "COMRATE",
+        "type": "C",
+        "length": 5
+      }
+    ],
+    "recordLength": 68
+  }
+}
