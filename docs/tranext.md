@@ -27,6 +27,11 @@ then calls `wf_write2{code}` to load repository / working tables (ORMAINCURR, CA
 | VH | DIS plan premium | `disPlanCurr` |
 | CS | Cash balance | `cashBalance` |
 | DA | Deposit slip | `depositSlip` (+ `apDeposits` bank key) |
+| RC1 | OR check return | `orRtrnCurr` |
+| VI | DIS withholding tax | `disWtax` |
+| HA | HS DLP / OR adjust | `hsDlpOr` |
+| OA | Life amendment | `lAmend` |
+| OB | Application no history | `lApplNoHist` |
 
 `focusWorkingFromStore` projects RC/RD/RE/VC/VF/DA into FOCUS `orCash` / `orItems` / `disCash` / `disItems` / `deposits`.
 
@@ -49,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-Remaining stub writers HA/OA/OB/VI/RC1 (see open PR if any); FOCUS DataWindow SQL depth.
+FOCUS OR/DIS check-path DataWindow depth.

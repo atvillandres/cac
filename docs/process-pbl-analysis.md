@@ -57,7 +57,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - BRS `.ALI` upload — see [`docs/brs-upload.md`](brs-upload.md)
 - BPY DBF mapping — see [`docs/bpy-mapping.md`](bpy-mapping.md)
 - SSI/GRP DBF mapping — see [`docs/grp-ssi-mapping.md`](grp-ssi-mapping.md)
-- TRANEXT DBF ImportFile + typed CS/DA/RA–RF/VA–VH + APTRANS/APDEP — see [`docs/tranext.md`](tranext.md)
+- TRANEXT DBF ImportFile + typed CS/DA/RA–RF/VA–VH/RC1/VI/HA/OA/OB + APTRANS/APDEP — see [`docs/tranext.md`](tranext.md)
 - Object inventory (166 source objects)
 
-Next slice: FOCUS OR/DIS check-path DataWindow depth, or merge open TRANEXT misc writers (#13).
+Next slice: FOCUS OR/DIS check-path DataWindow depth (SYRADJPARM adj loop is empty in extracted PB source).

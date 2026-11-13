@@ -500,6 +500,93 @@ export interface FocusWorkingSnapshot {
   depositSlip: DepositSlipRow[];
 }
 
+/** Port of ORRTRNCURR (wf_write2rc1 / RC1.DBF) — OR check return. */
+export interface OrRtrnCurrRow {
+  company: string;
+  orNo: string;
+  orDate: string;
+  foCode: string;
+  checkItemNo: number;
+  dateDep: string;
+  dateRtrn: string;
+  rtrnRsn: string;
+  userId: string;
+  dateStamp: string;
+  processDate: string;
+  userIdCac: string;
+}
+
+/** Port of DISWTAX (wf_write2vi / VI.DBF) — DIS withholding tax. */
+export interface DisWtaxRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  itemNo: number;
+  disTaxCode: string;
+  disAmt: number;
+  disTaxRate: number;
+  disTaxWhel: number;
+  disTaxDesc: string;
+  venCode: string;
+  processDate: string;
+  userId: string;
+}
+
+/** Port of HSDLPOR (wf_write2ha / HA.DBF) — HS DLP / OR adjust. */
+export interface HsDlpOrRow {
+  company: string;
+  foCode: string;
+  tranDate: string | number;
+  polNo: string;
+  oldDlp: number;
+  adjDlp: number;
+  orNo: string;
+  orDate: string;
+  orAmt: number;
+  userId: string;
+  dateStamp: string;
+  processDate: string;
+  userIdCac: string;
+}
+
+/** Port of LAMEND (wf_write2oa / OA.DBF) — life amendment. */
+export interface LAmendRow {
+  company: string;
+  foCode: string;
+  amendType: string;
+  polNo: string;
+  effectDate: string;
+  oldPayMode: string;
+  newPayMode: string;
+  oldModPrem: number;
+  newModPrem: number;
+  oldAgtNo: string;
+  newAgtNo: string;
+  oldPtd: string;
+  newPtd: string;
+  userId: string;
+  dateStamp: string;
+  remarks: string;
+  processDate: string;
+  userIdCac: string;
+}
+
+/** Port of LAPPLNOHIST (wf_write2ob / OB.DBF) — application no history. */
+export interface LApplNoHistRow {
+  company: string;
+  applNo: string;
+  seqNo: number;
+  effectDate: string;
+  newApplNo: string;
+  userId: string;
+  dateStamp: string;
+  processDate: string;
+  userIdCac: string;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
@@ -533,6 +620,11 @@ export interface DailyStore {
   disCashCurr: DisCashCurrRow[];
   disCheckCurr: DisCheckCurrRow[];
   disPlanCurr: DisPlanCurrRow[];
+  orRtrnCurr: OrRtrnCurrRow[];
+  disWtax: DisWtaxRow[];
+  hsDlpOr: HsDlpOrRow[];
+  lAmend: LAmendRow[];
+  lApplNoHist: LApplNoHistRow[];
   depositSlip: DepositSlipRow[];
   foControl: FoControlRow[];
   /** Raw TRANEXT rows by code after ImportFile (audit / unknown codes). */
@@ -575,6 +667,11 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     disCashCurr: seed?.disCashCurr ? [...seed.disCashCurr] : [],
     disCheckCurr: seed?.disCheckCurr ? [...seed.disCheckCurr] : [],
     disPlanCurr: seed?.disPlanCurr ? [...seed.disPlanCurr] : [],
+    orRtrnCurr: seed?.orRtrnCurr ? [...seed.orRtrnCurr] : [],
+    disWtax: seed?.disWtax ? [...seed.disWtax] : [],
+    hsDlpOr: seed?.hsDlpOr ? [...seed.hsDlpOr] : [],
+    lAmend: seed?.lAmend ? [...seed.lAmend] : [],
+    lApplNoHist: seed?.lApplNoHist ? [...seed.lApplNoHist] : [],
     depositSlip: seed?.depositSlip ? [...seed.depositSlip] : [],
     foControl: seed?.foControl ? [...seed.foControl] : [],
     tranextRaw: seed?.tranextRaw ? { ...seed.tranextRaw } : {},
