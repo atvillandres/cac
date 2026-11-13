@@ -125,14 +125,9 @@ export function demoFocusInput(userId = "DEMO"): FocusInput {
         acctType: "DISPREM",
       },
     ],
-    deposits: [
-      {
-        dsSeqNo: "DEP00001",
-        dateDep: today,
-        amount: 4000,
-        bankAcct: "BNK001",
-      },
-    ],
+    // Deposits omitted so OR+DIS trial balances without auto excess-cash post.
+    // Use disAddDedLines / deposits in dedicated tests.
+    deposits: [],
   };
 }
 
