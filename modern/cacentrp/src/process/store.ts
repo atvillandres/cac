@@ -17,6 +17,19 @@ export interface BdoApMstRow {
   userId: string;
 }
 
+/** Port of UNBALDOC (f_write2unbaldoc) — per-document DR/CR mismatch. */
+export interface UnbalDocRow {
+  compCode: string;
+  foCode: string;
+  sourceType: string;
+  docNum: string;
+  totalDebit: number;
+  totalCredit: number;
+  fileName: string;
+  processDate: string;
+  userId: string;
+}
+
 export interface CashBalanceRow {
   company: string;
   foCode: string;
@@ -456,6 +469,7 @@ export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
   unbalCurrLedge: CurrLedgeRow[];
+  unbalDocs: UnbalDocRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -495,6 +509,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     currLedge: seed?.currLedge ? [...seed.currLedge] : [],
     currLedgeX: seed?.currLedgeX ? [...seed.currLedgeX] : [],
     unbalCurrLedge: seed?.unbalCurrLedge ? [...seed.unbalCurrLedge] : [],
+    unbalDocs: seed?.unbalDocs ? [...seed.unbalDocs] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],

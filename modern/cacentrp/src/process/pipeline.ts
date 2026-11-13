@@ -48,9 +48,9 @@ export const DAILY_STAGES: PipelineStage[] = [
     id: "focus-map",
     menuId: "(from w_unload)",
     title: "FOCUS transaction mapping",
-    window: "w_focusinterfaceprocess",
+    window: "w_focusinterfaceprocess / w_alaifocusproc",
     status: "ported",
-    notes: "collection→disbursement→deposit→balance→complete → CURRLEDGE (FC)",
+    notes: "collection→collPdr→disbursement→fundTransfer→deposit→balance→complete → CURRLEDGE (FC); UNBALDOC",
   },
   {
     id: "cdr-map",

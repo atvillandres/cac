@@ -49,4 +49,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-ALAI FOCUS (`w_alaifocusproc`) polish; remaining stub writers (HA/OA/OB/VI/RC1).
+FOCUS net disbursement (`wf_procdisbnet`); remaining stub writers HA/OA/OB/VI/RC1 (see open PR if any).
