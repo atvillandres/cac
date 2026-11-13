@@ -2,13 +2,13 @@
  * Port of w_focusinterfaceprocess / w_alaifocusproc ue_process orchestration.
  *
  * Stages (legacy order):
- *   collection → collPdr → disbursement → fundTransfer → disbNet →
- *   deposit → balentries → processcomplete('L')
+ *   collection → collPdr → disbursement → disAddDed → fundTransfer →
+ *   disbNet → deposit → balentries → processcomplete('L')
  *
  * Full DataWindow SQL mapping is enormous; this slice implements the control
- * flow, CURRLEDGE row assembly from simplified OR/DIS/PDR/fund-transfer/
- * net-disbursement working sets + ACCTENT, UNBALDOC (f_write2unbaldoc),
- * and archive/commit semantics of wf_processcomplete / reject.
+ * flow, CURRLEDGE row assembly from simplified OR/DIS/PDR/add-ded/
+ * fund-transfer/net-disbursement working sets + ACCTENT, UNBALDOC,
+ * ERRCASHBAL, and archive/commit semantics of wf_processcomplete / reject.
  */
 import {
   applyAcctEnt,
@@ -140,6 +140,33 @@ export interface DisNetLine {
   isBank?: boolean;
 }
 
+/**
+ * Pre-joined DIS add/ded line (dw_disbmapdisadd / disbmapdisded ± cash).
+ * Amounts are DISADDAMT / DISDEDAMT from the legacy DataWindows.
+ */
+export interface DisAddDedLine {
+  disNo: string;
+  disDate: string;
+  currency: string;
+  payMode: "CSH" | "CHK";
+  kind: "ADD" | "DED";
+  acctCode: string;
+  drCr: "DR" | "CR";
+  amount: number;
+  itemNo?: number;
+  payType?: string;
+  unit?: string;
+  origCy?: string;
+  locCy?: string;
+  lob?: string;
+  agtNo?: string;
+  recDest?: string;
+  controlNo?: string;
+  lspAccType?: string;
+  lspOrType?: string;
+  isBank?: boolean;
+}
+
 export interface FocusInput {
   proc: ProcCdrVar;
   params: CacParams;
@@ -152,6 +179,15 @@ export interface FocusInput {
   pdrItems?: PdrItemRow[];
   disCash?: DisCashRow[];
   disItems?: DisItemRow[];
+  /** DIS add/ded mapped lines (inside wf_processdisbursement in legacy). */
+  disAddDedLines?: DisAddDedLine[];
+  /**
+   * SYRSPCEXCESS.EXCSCODE list for wf_spcexcsh — when `spcExcessCount` is 0,
+   * matching accounts are skipped; when > 0, the FO excess-cash acct is skipped.
+   */
+  spcExcessAccts?: string[];
+  /** Count of special excess rows retrieved for the FO (li_arg_spcexcess). */
+  spcExcessCount?: number;
   fundTransferDebits?: FundTransferLine[];
   fundTransferCredits?: FundTransferLine[];
   /**
@@ -164,6 +200,11 @@ export interface FocusInput {
   bankAcctCodes?: string[];
   disNetLines?: DisNetLine[];
   deposits?: DepositRow[];
+  /**
+   * When true, post imbalance to excess cash (older modern shortcut).
+   * Default false — matches legacy wf_balentries (fail H on trial imbalance).
+   */
+  autoBalanceExcessCash?: boolean;
 }
 
 export interface FocusStageResult {
@@ -300,9 +341,30 @@ function pushFundLine(
   return row;
 }
 
-function isBankLine(line: DisNetLine, bankAccts: Set<string>): boolean {
+function isBankLine(
+  line: { acctCode: string; isBank?: boolean },
+  bankAccts: Set<string>,
+): boolean {
   if (line.isBank) return true;
   return bankAccts.has(line.acctCode.trim().toUpperCase());
+}
+
+/**
+ * Port of wf_spcexcsh — skip special excess-cash accounts during DIS mapping.
+ * Returns true when the line should be skipped (CONTINUE in legacy).
+ */
+export function shouldSkipSpcExcsh(
+  acctCode: string,
+  input: FocusInput,
+): boolean {
+  const acct = acctCode.trim();
+  const excess = (input.params.excessCashAcct ?? "").trim();
+  const spc = (input.spcExcessAccts ?? []).map((a) => a.trim());
+  const count = input.spcExcessCount ?? 0;
+  const inSpc = spc.some((a) => a === acct);
+  if (inSpc && count === 0) return true;
+  if (excess !== "" && acct === excess && count > 0) return true;
+  return false;
 }
 
 function updateBdoStatus(store: DailyStore, input: FocusInput, status: string): number {
@@ -473,6 +535,48 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
     stage: "disbursement",
     ok: true,
     detail: `Mapped ${added} DIS line(s)`,
+    rowsAdded: added,
+  };
+}
+
+/**
+ * Port of DIS add/ded mapping inside wf_processdisbursement
+ * (dw_disbmapdisadd / disbmapdisded ± cash). Skips SYRBANK + wf_spcexcsh hits.
+ */
+export function processDisAddDed(
+  input: FocusInput,
+  out: CurrLedgeRow[],
+): FocusStageResult {
+  const lines = input.disAddDedLines ?? [];
+  if (lines.length === 0) {
+    return {
+      stage: "disAddDed",
+      ok: true,
+      detail: "No DIS add/ded lines",
+      rowsAdded: 0,
+    };
+  }
+
+  const bankAccts = new Set(
+    (input.bankAcctCodes ?? []).map((a) => a.trim().toUpperCase()).filter(Boolean),
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  let added = 0;
+  let skipped = 0;
+
+  for (const line of lines) {
+    if (isBankLine(line, bankAccts) || shouldSkipSpcExcsh(line.acctCode, input)) {
+      skipped++;
+      continue;
+    }
+    pushFundLine(out, input, line, today);
+    added++;
+  }
+
+  return {
+    stage: "disAddDed",
+    ok: true,
+    detail: `Mapped ${added} DIS add/ded line(s)` + (skipped ? `; skipped ${skipped}` : ""),
     rowsAdded: added,
   };
 }
@@ -745,16 +849,89 @@ export function processDeposit(input: FocusInput, out: CurrLedgeRow[]): FocusSta
 }
 
 /**
- * Simplified balentries: ensure mapped rows balance; if not, post difference
- * to FO excess cash account (param 101) — mirrors FO excess cash intent.
+ * Port of wf_balentries:
+ * - Trial imbalance → BDOAPMST 'H' (unless autoBalanceExcessCash)
+ * - When balanced, compare excess-cash PHP/USD nets to CASHBALANCE → ERRCASHBAL + 'I'
  */
 export function balanceEntries(
+  store: DailyStore,
   input: FocusInput,
   out: CurrLedgeRow[],
 ): FocusStageResult {
   const { debit, credit } = debitCreditTotals(out);
-  const diff = Math.round((debit - credit) * 100) / 100;
-  if (diff === 0) {
+  const diff = round2(debit - credit);
+
+  if (diff !== 0) {
+    if (input.autoBalanceExcessCash) {
+      const side = diff > 0 ? "CR" : "DR";
+      const acct = input.params.excessCashAcct;
+      out.push({
+        coCode: input.proc.compCode,
+        foCode: input.proc.foCode,
+        refNo: "",
+        refDate: input.proc.dateRec,
+        sourceType: "FC",
+        acctCode: acct,
+        drCr: side,
+        amount: Math.abs(diff),
+        unit: input.params.foUnit ?? "",
+        origCy: "PHP",
+        locCy: "PHP",
+        lob: "01",
+        processDate: new Date().toISOString().slice(0, 10),
+        recDest: "",
+        controlNo: "",
+        lspAccType: "",
+        lspOrType: "",
+        payType: "",
+        effectDate: new Date().toISOString().slice(0, 10),
+        userId: input.userId,
+        tranType: "CACPAR01",
+        numberSign: numberSignFor(side, acct),
+      });
+      return {
+        stage: "balance",
+        ok: true,
+        detail: `Imbalanced by ${diff}; posted ${side} ${Math.abs(diff)} to excess cash ${acct}`,
+        rowsAdded: 1,
+      };
+    }
+    updateBdoStatus(store, input, "H");
+    return {
+      stage: "balance",
+      ok: false,
+      detail: `Trial imbalance DR=${debit} CR=${credit}; BDOAPMST=H`,
+      rowsAdded: 0,
+    };
+  }
+
+  // Excess-cash account nets by currency (FO bal proxy from mapfocus)
+  const excess = (input.params.excessCashAcct ?? "").trim();
+  let phpDr = 0;
+  let phpCr = 0;
+  let usdDr = 0;
+  let usdCr = 0;
+  for (const row of out) {
+    if (row.acctCode.trim() !== excess) continue;
+    const cy = (row.origCy ?? "PHP").trim().toUpperCase();
+    if (cy === "PHP") {
+      if (row.drCr === "DR") phpDr = round2(phpDr + row.amount);
+      else phpCr = round2(phpCr + row.amount);
+    } else if (cy === "USD") {
+      if (row.drCr === "DR") usdDr = round2(usdDr + row.amount);
+      else usdCr = round2(usdCr + row.amount);
+    }
+  }
+  const phpFoBal = round2(phpDr - phpCr);
+  const usdFoBal = round2(usdDr - usdCr);
+
+  const cashRows = store.cashBalance.filter(
+    (c) =>
+      c.company === input.proc.compCode &&
+      c.foCode === input.proc.foCode &&
+      c.tranDate === input.proc.dateRec,
+  );
+  if (cashRows.length === 0) {
     return {
       stage: "balance",
       ok: true,
@@ -762,38 +939,43 @@ export function balanceEntries(
       rowsAdded: 0,
     };
   }
-  // Post balancing entry to excess cash account
-  const side = diff > 0 ? "CR" : "DR";
-  const acct = input.params.excessCashAcct;
-  out.push({
-    coCode: input.proc.compCode,
-    foCode: input.proc.foCode,
-    refNo: "",
-    refDate: input.proc.dateRec,
-    sourceType: "FC",
-    acctCode: acct,
-    drCr: side,
-    amount: Math.abs(diff),
-    unit: input.params.foUnit ?? "",
-    origCy: "PHP",
-    locCy: "PHP",
-    lob: "01",
-    processDate: new Date().toISOString().slice(0, 10),
-    recDest: "",
-    controlNo: "",
-    lspAccType: "",
-    lspOrType: "",
-    payType: "",
-    effectDate: new Date().toISOString().slice(0, 10),
-    userId: input.userId,
-    tranType: "CACPAR01",
-    numberSign: numberSignFor(side, acct),
-  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  let mismatch = false;
+  for (const cy of ["PHP", "USD"] as const) {
+    const cac = cashRows.find((c) => c.currency.trim().toUpperCase() === cy);
+    if (!cac) continue;
+    const foBal = cy === "PHP" ? phpFoBal : usdFoBal;
+    if (foBal !== round2(cac.cashBal)) {
+      store.errCashBal.push({
+        compCode: input.proc.compCode,
+        foCode: input.proc.foCode,
+        tranDate: input.proc.dateRec,
+        foBal,
+        cacBal: round2(cac.cashBal),
+        currency: cy,
+        processDate: today,
+        userId: input.userId,
+      });
+      mismatch = true;
+    }
+  }
+
+  if (mismatch) {
+    updateBdoStatus(store, input, "I");
+    return {
+      stage: "balance",
+      ok: false,
+      detail: `Excess-cash vs CASHBALANCE mismatch; ERRCASHBAL + BDOAPMST=I`,
+      rowsAdded: 0,
+    };
+  }
+
   return {
     stage: "balance",
     ok: true,
-    detail: `Imbalanced by ${diff}; posted ${side} ${Math.abs(diff)} to excess cash ${input.params.excessCashAcct}`,
-    rowsAdded: 1,
+    detail: `Balanced DR=${debit} CR=${credit}; cash bal OK`,
+    rowsAdded: 0,
   };
 }
 
@@ -874,6 +1056,7 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
     processCollection,
     processCollPdr,
     processDisbursement,
+    processDisAddDed,
   ];
   for (const step of early) {
     const result = step(input, mapFocus);
@@ -896,12 +1079,16 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
     return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
   }
 
-  for (const step of [processDeposit, balanceEntries]) {
-    const result = step(input, mapFocus);
-    stages.push(result);
-    if (!result.ok) {
-      return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
-    }
+  const dep = processDeposit(input, mapFocus);
+  stages.push(dep);
+  if (!dep.ok) {
+    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
+  }
+
+  const bal = balanceEntries(store, input, mapFocus);
+  stages.push(bal);
+  if (!bal.ok) {
+    return { ok: false, stages, mapFocus, batchFile: "Error.bat", unbalDocs: [...store.unbalDocs] };
   }
 
   const complete = processComplete(store, input, mapFocus, "L");

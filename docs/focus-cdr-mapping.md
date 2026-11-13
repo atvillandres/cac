@@ -14,12 +14,13 @@
 2. Retrieve OR cash / check / item / unique DataWindows  
 3. **`wf_processcollection`**  
 4. **`wf_proccollpdr`** (when OR items match `SYRPDRPARM.TRANTYPE`)  
-5. **`wf_processdisbursement`** (ends with **`wf_fundtransfer`**, then **`wf_procdisbnet`** when `SYRNETPARM` products exist)  
+5. **`wf_processdisbursement`** (maps DIS + **add/ded**; applies **`wf_spcexcsh`**; ends with **`wf_fundtransfer`**, then **`wf_procdisbnet`** when `SYRNETPARM` products exist)  
 6. **`wf_processdeposit`**  
-7. **`wf_balentries`**  
+7. **`wf_balentries`** — trial must balance (else BDO **`H`**); excess-cash PHP/USD vs `CASHBALANCE` (else `ERRCASHBAL` + **`I`**)  
 8. **`wf_processcomplete('L')`** → write `dw_mapfocus` → `CURRLEDGE`, archive working `*` → `*X`, Success.bat  
 
-**Net disbursement (`wf_procdisbnet`)** maps cash-net / check-net lines at `disnetamt`; skips SYRBANK accounts on the non-bank pass; check path posts bank lines as **CR**; all-bank check docs defer to fund transfer; USD lines on param **106** convert via booking rate → PHP.
+**Add/ded** maps `DISADDAMT` / `DISDEDAMT` lines; skips SYRBANK and `wf_spcexcsh` hits.  
+**Net disbursement (`wf_procdisbnet`)** maps cash-net / check-net at `disnetamt`; skips SYRBANK on non-bank pass; check path posts bank lines as **CR**; all-bank check docs defer to fund transfer; USD param-**106** × booking rate → PHP.
 
 Fund-transfer / net-DIS / disbursement document imbalance → `f_write2unbaldoc` (`UNBALDOC`) and BDOAPMST status **`Q`** (per-doc) or **`H`** (grand total).  
 `mapfocus.numbersign` = `*` on DR for accounts `214000` / `205002`.
@@ -43,11 +44,11 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 ## Modern module
 
 - `src/process/currledge.ts` — structure + helpers (`numberSign` optional)  
-- `src/process/focus.ts` — stage pipeline (collection → collPdr → disbursement → fundTransfer → disbNet → deposit → balance → complete)  
-- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`)  
+- `src/process/focus.ts` — stage pipeline (collection → collPdr → disbursement → disAddDed → fundTransfer → disbNet → deposit → balance → complete)  
+- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`)  
 - `src/process/cdr.ts` — APTRANS/APDEPOSIT mapper  
 - CLI: `cacentrp daily focus` / `cacentrp daily cdr`
 
 ## Still pending
 
-Full DataWindow SQL joins for OR/DIS check/add/ded paths; `wf_spcexcsh` / adj-entry depth.
+Full DataWindow SQL joins for OR/DIS check paths; SYRADJPARM / adj-entry depth inside `wf_balentries`.

@@ -4,12 +4,14 @@
 import { createStore } from "./store.js";
 import {
   numberSignFor,
+  processDisAddDed,
   processDisbNet,
   runFocusMapping,
+  shouldSkipSpcExcsh,
   type FocusInput,
 } from "./focus.js";
 import { runCdrMapping } from "./cdr.js";
-import { debitCreditTotals } from "./currledge.js";
+import { debitCreditTotals, type CurrLedgeRow } from "./currledge.js";
 import { demoCdrInput, demoFocusInput, DEMO_ACCTENT, DEMO_PARAMS } from "./fixtures.js";
 
 function check(cond: boolean, msg: string): void {
@@ -17,7 +19,7 @@ function check(cond: boolean, msg: string): void {
 }
 
 const STAGE_ORDER =
-  "collection,collPdr,disbursement,fundTransfer,disbNet,deposit,balance,complete";
+  "collection,collPdr,disbursement,disAddDed,fundTransfer,disbNet,deposit,balance,complete";
 
 // FOCUS happy path
 {
@@ -68,6 +70,7 @@ const STAGE_ORDER =
   const today = new Date().toISOString().slice(0, 10);
   const input: FocusInput = {
     ...demoFocusInput(),
+    autoBalanceExcessCash: true,
     pdrTranTypes: ["PD"],
     pdrItems: [
       {
@@ -81,8 +84,6 @@ const STAGE_ORDER =
       },
     ],
   };
-  // Balance the extra PDR credit with matching cash DR via excess-cash balentries
-  // (demo OR/DIS/DEP still balance among themselves; PDR adds CR 250 → balentries posts DR/CR to excess).
   const result = runFocusMapping(store, input);
   check(result.ok, `pdr focus failed: ${result.stages.map((s) => s.detail).join("; ")}`);
   const pdrStage = result.stages.find((s) => s.stage === "collPdr");
@@ -324,7 +325,7 @@ const STAGE_ORDER =
       },
     ],
   };
-  const out: import("./currledge.js").CurrLedgeRow[] = [];
+  const out: CurrLedgeRow[] = [];
   const stage = processDisbNet(store, input, out);
   check(stage.ok, `check-net failed: ${stage.detail}`);
   check(stage.rowsAdded === 2, `expected 2 mapped (non-bank + bank CR), got ${stage.rowsAdded}`);
@@ -423,11 +424,186 @@ const STAGE_ORDER =
       },
     ],
   };
-  const out: import("./currledge.js").CurrLedgeRow[] = [];
+  const out: CurrLedgeRow[] = [];
   const stage = processDisbNet(store, input, out);
   check(stage.ok, `usd gain/loss failed: ${stage.detail}`);
   const gain = out.find((r) => r.acctCode === "490001");
   check(gain?.amount === 500 && gain.origCy === "PHP", `gain converted: ${JSON.stringify(gain)}`);
+}
+
+// DIS add/ded + wf_spcexcsh skip
+{
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    bankAcctCodes: ["102900"],
+    spcExcessAccts: ["214999"],
+    spcExcessCount: 0,
+    disAddDedLines: [
+      {
+        disNo: "DS000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "DED",
+        acctCode: "501400",
+        drCr: "DR",
+        amount: 75,
+        payType: "CSH",
+      },
+      {
+        disNo: "DS000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "ADD",
+        acctCode: "401400",
+        drCr: "CR",
+        amount: 75,
+        payType: "CSH",
+      },
+      {
+        disNo: "DS000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "DED",
+        acctCode: "102900",
+        drCr: "DR",
+        amount: 10,
+        isBank: true,
+      },
+      {
+        disNo: "DS000001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "ADD",
+        acctCode: "214999",
+        drCr: "CR",
+        amount: 10,
+      },
+    ],
+  };
+  check(shouldSkipSpcExcsh("214999", input), "spc excess skip when count=0");
+  check(!shouldSkipSpcExcsh("214000", { ...input, spcExcessCount: 0 }), "excess cash not skipped at count=0");
+  check(
+    shouldSkipSpcExcsh("214000", { ...input, spcExcessCount: 1, spcExcessAccts: [] }),
+    "FO excess skipped when count>0",
+  );
+  const out: CurrLedgeRow[] = [];
+  const stage = processDisAddDed(input, out);
+  check(stage.ok && stage.rowsAdded === 2, `add/ded mapped=${stage.rowsAdded} detail=${stage.detail}`);
+  check(stage.detail.includes("skipped 2"), `detail=${stage.detail}`);
+  check(!out.some((r) => r.acctCode === "102900" || r.acctCode === "214999"), "bank/spc skipped");
+}
+
+// Trial imbalance → BDO H (strict balentries)
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const input = demoFocusInput();
+  input.deposits = [
+    {
+      dsSeqNo: "DEP00001",
+      dateDep: input.proc.dateRec,
+      amount: 4000,
+      bankAcct: "BNK001",
+    },
+  ];
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "trial imbalance should fail");
+  check(store.bdoApMst[0].status === "H", "BDOAPMST H");
+  check(result.stages.some((s) => s.stage === "balance" && !s.ok), "balance failed");
+}
+
+// Excess-cash vs CASHBALANCE mismatch → ERRCASHBAL + I
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  store.cashBalance.push({
+    company: "ALAI",
+    foCode: "001",
+    cashBal: 99,
+    tranDate: today,
+    currency: "PHP",
+  });
+  // Seed mapfocus-equivalent via OR that hits excess cash asymmetrically then balance with DIS
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORX001",
+        orDate: today,
+        currency: "PHP",
+        cashAmt: 50,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORX001",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 50,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+    // Force an excess-cash DR 50 via add/ded so FO bal ≠ CASHBALANCE 99
+    disAddDedLines: [
+      {
+        disNo: "DSX001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "DED",
+        acctCode: "214000",
+        drCr: "DR",
+        amount: 50,
+        origCy: "PHP",
+      },
+      {
+        disNo: "DSX001",
+        disDate: today,
+        currency: "PHP",
+        payMode: "CSH",
+        kind: "ADD",
+        acctCode: "101001",
+        drCr: "CR",
+        amount: 50,
+        origCy: "PHP",
+      },
+    ],
+  };
+  // Wait - ORCASH uses ACCTENT 101001 not excess. The excess DR 50 from add/ded:
+  // OR: DR 101001 50, CR 401001 50; ADDDED: DR 214000 50, CR 101001 50 → totals DR 100 CR 100
+  // excess FO bal = 50 (DR-CR on 214000). CASHBALANCE 99 → mismatch
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "cash bal mismatch should fail");
+  check(store.errCashBal.length === 1, "ERRCASHBAL row");
+  check(store.errCashBal[0].foBal === 50 && store.errCashBal[0].cacBal === 99, "bal amounts");
+  check(store.bdoApMst[0].status === "I", "BDOAPMST I");
 }
 
 // CDR happy path

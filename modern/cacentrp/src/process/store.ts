@@ -38,6 +38,18 @@ export interface CashBalanceRow {
   currency: string;
 }
 
+/** Port of ERRCASHBAL — FO vs CAC excess-cash mismatch from wf_balentries. */
+export interface ErrCashBalRow {
+  compCode: string;
+  foCode: string;
+  tranDate: string;
+  foBal: number;
+  cacBal: number;
+  currency: string;
+  processDate: string;
+  userId: string;
+}
+
 export interface ApTransStoreRow {
   counter?: number;
   company?: string;
@@ -470,6 +482,7 @@ export interface DailyStore {
   currLedgeX: CurrLedgeRow[];
   unbalCurrLedge: CurrLedgeRow[];
   unbalDocs: UnbalDocRow[];
+  errCashBal: ErrCashBalRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -510,6 +523,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     currLedgeX: seed?.currLedgeX ? [...seed.currLedgeX] : [],
     unbalCurrLedge: seed?.unbalCurrLedge ? [...seed.unbalCurrLedge] : [],
     unbalDocs: seed?.unbalDocs ? [...seed.unbalDocs] : [],
+    errCashBal: seed?.errCashBal ? [...seed.errCashBal] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
