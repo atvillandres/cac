@@ -60,4 +60,4 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - TRANEXT DBF ImportFile + typed CS/DA/RA/FO_TCDBF writers — see [`docs/tranext.md`](tranext.md)
 - Object inventory (166 source objects)
 
-Next slice: typed APTRANS/APDEP writers, or ALAI FOCUS (`w_alaifocusproc`) polish.
+Next slice: ALAI FOCUS (`w_alaifocusproc`) polish, or stub writers HA/OA/OB/VI/RC1.
