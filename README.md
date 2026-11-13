@@ -21,7 +21,8 @@ node dist/index.js daily lspupload --out /tmp/lsp
 node dist/index.js daily brs --inbound /tmp/bis
 node dist/index.js daily bpy
 node dist/index.js daily grp
+node dist/index.js daily tranext
 npm test
 ```
 
-Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md), [`docs/glwalker.md`](docs/glwalker.md), [`docs/lsp-upload.md`](docs/lsp-upload.md), [`docs/brs-upload.md`](docs/brs-upload.md), [`docs/bpy-mapping.md`](docs/bpy-mapping.md), [`docs/grp-ssi-mapping.md`](docs/grp-ssi-mapping.md).
+Analysis: [`docs/cacentrp-analysis.md`](docs/cacentrp-analysis.md), [`docs/process-pbl-analysis.md`](docs/process-pbl-analysis.md), [`docs/focus-cdr-mapping.md`](docs/focus-cdr-mapping.md), [`docs/glwalker.md`](docs/glwalker.md), [`docs/lsp-upload.md`](docs/lsp-upload.md), [`docs/brs-upload.md`](docs/brs-upload.md), [`docs/bpy-mapping.md`](docs/bpy-mapping.md), [`docs/grp-ssi-mapping.md`](docs/grp-ssi-mapping.md), [`docs/tranext.md`](docs/tranext.md), [`docs/unload.md`](docs/unload.md).

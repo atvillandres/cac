@@ -149,6 +149,60 @@ export interface BpyFileRow {
 /** Port of GRPFILE / GRPFILEX (unload SSI → w_grpinterfaceprocess). */
 export type GrpFileRow = BpyFileRow;
 
+/** Port of ORMAINCURR from wf_write2ra (TRANEXT RA.DBF). */
+export interface OrMainCurrRow {
+  company: string;
+  orNo: string;
+  orDate: string;
+  foCode: string;
+  orStatCode: string;
+  orStatDate: string;
+  processTyp: string;
+  recvName: string;
+  recvAddr1: string;
+  recvAddr2: string;
+  recvAddr3: string;
+  userId: string;
+  dateStamp: string;
+  varPol: string;
+  processDate: string;
+  userIdCac: string;
+}
+
+/** Port of deposit-slip working rows from wf_write2da (TRANEXT DA.DBF). */
+export interface DepositSlipRow {
+  company: string;
+  foCode: string;
+  dsSeqNo: string;
+  dateDep: string;
+  dsType: string;
+  bankAcctNo: string;
+  bankCode: string;
+  bankBranch: string;
+  acctCode: string;
+  currency: string;
+  amount: number;
+  dsDeposito: string;
+  userId: string;
+  dateStamp: string;
+  processDate: string;
+}
+
+/** Port of FO_TCDBF control rows. */
+export interface FoControlRow {
+  tcName: string;
+  tcSize: number;
+  tcDate: string;
+  tcTime: string;
+  tcCount: number;
+  tcStatus: string;
+  tcModet: string;
+  tcTrnDate: string;
+  tcControl: number;
+  tcHash: number;
+  tcFile: number;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
@@ -164,6 +218,11 @@ export interface DailyStore {
   apTransX: ApTransStoreRow[];
   apDeposits: ApDepositStoreRow[];
   apDepositX: ApDepositStoreRow[];
+  orMainCurr: OrMainCurrRow[];
+  depositSlip: DepositSlipRow[];
+  foControl: FoControlRow[];
+  /** Raw TRANEXT rows by code (RB–RF, VA–VH, …) after ImportFile. */
+  tranextRaw: Record<string, Record<string, string | number>[]>;
   intInpFl: IntInpFlRow[];
   glwDtl: GlwDtlStoreRow[];
   brsFileX: BrsFileXRow[];
@@ -185,6 +244,10 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     apTransX: seed?.apTransX ? [...seed.apTransX] : [],
     apDeposits: seed?.apDeposits ? [...seed.apDeposits] : [],
     apDepositX: seed?.apDepositX ? [...seed.apDepositX] : [],
+    orMainCurr: seed?.orMainCurr ? [...seed.orMainCurr] : [],
+    depositSlip: seed?.depositSlip ? [...seed.depositSlip] : [],
+    foControl: seed?.foControl ? [...seed.foControl] : [],
+    tranextRaw: seed?.tranextRaw ? { ...seed.tranextRaw } : {},
     intInpFl: seed?.intInpFl ? [...seed.intInpFl] : [],
     glwDtl: seed?.glwDtl ? [...seed.glwDtl] : [],
     brsFileX: seed?.brsFileX ? [...seed.brsFileX] : [],

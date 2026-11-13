@@ -7,7 +7,7 @@
  *   3. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI)
  *   4. Optional mapDownstream → call ported FOCUS/CDR/BPY/GRP mappers
  *
- * Full TRANEXT wf_write2* DBF table loaders remain stubs (schemas in tranext-schemas.json).
+ * TRANEXT: optional tranextDir → ImportFile + wf_write2* (typed CS/DA/RA/FO_TCDBF).
  */
 import { readdirSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -17,7 +17,12 @@ import { DEMO_ACCTENT, DEMO_PARAMS, demoCdrInput, demoFocusInput } from "./fixtu
 import { runFocusMapping, type FocusInput } from "./focus.js";
 import { runGrpMapping } from "./grp.js";
 import type { BpyFileRow, DailyStore, GrpFileRow } from "./store.js";
-import type { TranextCode } from "./tranext.js";
+import {
+  FOCUS_TRANEXT_FILES,
+  runTranextLoad,
+  type TranextCode,
+  type TranextLoadResult,
+} from "./tranext.js";
 
 export type AttachmentKind = "FOCUS" | "CDR" | "UNKNOWN";
 
@@ -58,6 +63,10 @@ export interface UnloadInput {
   mapDownstream?: boolean;
   focusInput?: FocusInput;
   cdrInput?: CdrInput;
+  /** Directory of TRANEXT *.DBF (legacy `...\ALAI\TRANEXT\`) — ImportFile + wf_write2* */
+  tranextDir?: string;
+  tranextCompany?: string;
+  tranextFoCode?: string;
 }
 
 export interface UnloadStepLog {
@@ -78,28 +87,15 @@ export interface UnloadResult {
     bpyRows: number;
     grpRows: number;
   };
-  /** Planned TRANEXT writers for FOCUS path (schemas only; no DBF parse yet) */
+  /** Planned TRANEXT writers for FOCUS path */
   tranextPlan: TranextCode[];
+  /** Result of runTranextLoad when tranextDir was supplied */
+  tranextLoad?: TranextLoadResult;
 }
 
 /** FOCUS extract typically drives these writers after wf_procfocusfiles. */
 export const FOCUS_TRANEXT_WRITERS: TranextCode[] = [
-  "RA",
-  "RB",
-  "RC",
-  "RD",
-  "RE",
-  "RF",
-  "VA",
-  "VB",
-  "VC",
-  "VD",
-  "VE",
-  "VF",
-  "VG",
-  "VH",
-  "CS",
-  "DA",
+  ...(FOCUS_TRANEXT_FILES as readonly TranextCode[]),
 ];
 
 /** CDR path writers. */
@@ -317,6 +313,36 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     });
   }
 
+  let tranextLoad: TranextLoadResult | undefined;
+  if (input.tranextDir) {
+    const company =
+      input.tranextCompany ??
+      focusJobs[0]?.company ??
+      "ALAI";
+    const foCode =
+      input.tranextFoCode ??
+      focusJobs[0]?.foCode ??
+      "000";
+    tranextLoad = runTranextLoad(store, {
+      dir: input.tranextDir,
+      company,
+      foCode,
+      userId: input.userId,
+    });
+    for (const r of tranextLoad.results) {
+      logs.push({
+        step: `tranext-${r.code.toLowerCase()}`,
+        detail: `${r.detail} (read=${r.read} write=${r.written} reject=${r.rejected})`,
+        ok: r.ok,
+      });
+    }
+    logs.push({
+      step: "tranext-load",
+      detail: tranextLoad.detail,
+      ok: tranextLoad.ok,
+    });
+  }
+
   if (mapDown) {
     // FOCUS — one demo/map call per job (payload tables not yet parsed from FCS)
     for (const job of focusJobs) {
@@ -425,5 +451,6 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     ssiFiles,
     mapped,
     tranextPlan: [...tranextPlan],
+    tranextLoad,
   };
 }

@@ -22,10 +22,9 @@ Manual Loading (`w_user_unload`) shares the same writers without MAPI.
 | Attach classify | extension → company + appsrce |
 | Inbound | BPY→`bpyFile`, GRP→`grpFile` (append) |
 | `mapDownstream` | Calls ported FOCUS/CDR/BPY/GRP mappers |
-| TRANEXT plan | Lists planned `wf_write2*` codes (no DBF parse yet) |
+| TRANEXT plan | Lists planned `wf_write2*` codes |
+| `tranextDir` | ImportFile + `wf_write2*` via `runTranextLoad` (CS/DA/RA typed; others → `tranextRaw`) |
 
-CLI: `cacentrp daily run --map` (default on) / `daily unload`
+CLI: `cacentrp daily run --map` (default on) / `daily unload [--tranext dir]` / `daily tranext`
 
-## Still stubbed
-
-Individual `wf_write2ra`… TRANEXT DBF→working-table loaders (schemas in `tranext-schemas.json`).
+See [`docs/tranext.md`](tranext.md).
