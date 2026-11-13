@@ -337,10 +337,14 @@ function runDailyCommand(argv: string[]) {
     }
     console.log(result.detail);
     console.log(
-      `ORMAINCURR=${store.orMainCurr.length} DEPOSITSLIP=${store.depositSlip.length} CASHBAL=${store.cashBalance.length} FO_CTRL=${store.foControl.length}`,
+      `ORMAINCURR=${store.orMainCurr.length} ORITEM=${store.orItemCurr.length} ORDtl=${store.orItemDtlCurr.length} ORCASH=${store.orCashCurr.length} ORCHK=${store.orCheckCurr.length}`,
     );
-    const rawKeys = Object.keys(store.tranextRaw).sort();
-    console.log(`tranextRaw codes: ${rawKeys.join(",") || "(none)"}`);
+    console.log(
+      `DISMAIN=${store.disMainCurr.length} DISITEM=${store.disItemCurr.length} DISDtl=${store.disItemDtlCurr.length} DISCASH=${store.disCashCurr.length}`,
+    );
+    console.log(
+      `DEPOSITSLIP=${store.depositSlip.length} CASHBAL=${store.cashBalance.length} FO_CTRL=${store.foControl.length}`,
+    );
     return;
   }
 

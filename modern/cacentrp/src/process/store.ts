@@ -203,6 +203,239 @@ export interface FoControlRow {
   tcFile: number;
 }
 
+/** Port of ORITEMCURR (wf_write2rb / RB.DBF). */
+export interface OrItemCurrRow {
+  company: string;
+  foCode: string;
+  orNo: string;
+  orDate: string;
+  grpItemNo: number;
+  prodCode: string;
+  polNo: string;
+  ptd: string;
+  applNo: string;
+  entNo: string;
+  clientName: string;
+  agtNo: string;
+  srvFoCode: string;
+  payMode: string;
+  planCode: string;
+  agcyCode: string;
+  modalPrem: number;
+  payCode: string;
+  dueDate: string;
+  currency: string;
+  issueDate: string;
+  agtName: string;
+  processDate: string;
+}
+
+/** Port of OR item detail (wf_write2rc / RC.DBF). */
+export interface OrItemDtlCurrRow {
+  company: string;
+  foCode: string;
+  orNo: string;
+  orDate: string;
+  grpItemNo: number;
+  itemNo: number;
+  payType: string;
+  orItemAmt: number;
+  dueDate: string;
+  ssiYrMm: string;
+  remarks: string;
+  postTag: string;
+  orItemDtlT: string;
+  processDate: string;
+}
+
+/** Port of OR cash (wf_write2rd / RD.DBF). */
+export interface OrCashCurrRow {
+  company: string;
+  foCode: string;
+  orNo: string;
+  orDate: string;
+  currency: string;
+  cashAmt: number;
+  dsSeqNo: string;
+  processDate: string;
+}
+
+/** Port of OR check (wf_write2re / RE.DBF). */
+export interface OrCheckCurrRow {
+  company: string;
+  foCode: string;
+  orNo: string;
+  orDate: string;
+  checkItemNo: number;
+  checkNo: string;
+  checkDate: string;
+  currency: string;
+  checkAmt: number;
+  checkClrTy: string;
+  dsSeqNo: string;
+  checkType: string;
+  checkTypeD: string;
+  bankBranch: string;
+  processDate: string;
+}
+
+/** Port of OR APR (wf_write2rf / RF.DBF). */
+export interface OrAprCurrRow {
+  company: string;
+  foCode: string;
+  orNo: string;
+  orDate: string;
+  aprNo: string;
+  aprDate: string;
+  aprAmt: number;
+  withheldTa: string;
+  processDate: string;
+}
+
+/** Port of DISMAINCURR (wf_write2va / VA.DBF). */
+export interface DisMainCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  disStatCode: string;
+  disStatDate: string;
+  userId: string;
+  dateStamp: string;
+  orNo: string;
+  processDate: string;
+}
+
+/** Port of DIS group/policy (wf_write2vb / VB.DBF). */
+export interface DisItemCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  prodCode: string;
+  agtNo: string;
+  polNo: string;
+  clientName: string;
+  unitCode: string;
+  entNo: string;
+  ptd: string;
+  srvFoCode: string;
+  tin: string;
+  agcyCode: string;
+  issueDate: string;
+  agtName: string;
+  planCode: string;
+  payMode: string;
+  payCode: string;
+  sitCode: string;
+  orNo: string;
+  processDate: string;
+}
+
+/** Port of DIS item detail (wf_write2vc / VC.DBF). */
+export interface DisItemDtlCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  itemNo: number;
+  disType: string;
+  disAmt: number;
+  disNetAmt: number;
+  disRecapTa: string;
+  disCommRat: number;
+  disCommTyp: string;
+  disSaleCom: string;
+  disExpl: string;
+  itemDtlDat: string;
+  disItemDtl: string;
+  chkClrDays: number;
+  unitCode: string;
+  processDate: string;
+}
+
+/** Port of DIS addition (wf_write2vd / VD.DBF). */
+export interface DisAddCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  itemNo: number;
+  disType: string;
+  addCode: string;
+  disAddAmt: number;
+  processDate: string;
+}
+
+/** Port of DIS deduction (wf_write2ve / VE.DBF). */
+export interface DisDedCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  itemNo: number;
+  disType: string;
+  dedCode: string;
+  disDedAmt: number;
+  processDate: string;
+}
+
+/** Port of DIS cash (wf_write2vf / VF.DBF). */
+export interface DisCashCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  seqNo: number;
+  currency: string;
+  cashAmt: number;
+  payee: string;
+  processDate: string;
+}
+
+/** Port of DIS check (wf_write2vg / VG.DBF). */
+export interface DisCheckCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  checkItemNo: number;
+  checkNo: string;
+  checkDate: string;
+  bankCode: string;
+  bankBranch: string;
+  currency: string;
+  checkAmt: number;
+  payee: string;
+  processDate: string;
+}
+
+/** Port of DIS plan premium (wf_write2vh / VH.DBF). */
+export interface DisPlanCurrRow {
+  company: string;
+  foCode: string;
+  disForm: string;
+  disNo: string;
+  disDate: string;
+  grpItemNo: number;
+  baseRiderC: string;
+  planCode: string;
+  totModPrem: number;
+  comRate: string;
+  processDate: string;
+}
+
 export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
@@ -219,9 +452,22 @@ export interface DailyStore {
   apDeposits: ApDepositStoreRow[];
   apDepositX: ApDepositStoreRow[];
   orMainCurr: OrMainCurrRow[];
+  orItemCurr: OrItemCurrRow[];
+  orItemDtlCurr: OrItemDtlCurrRow[];
+  orCashCurr: OrCashCurrRow[];
+  orCheckCurr: OrCheckCurrRow[];
+  orAprCurr: OrAprCurrRow[];
+  disMainCurr: DisMainCurrRow[];
+  disItemCurr: DisItemCurrRow[];
+  disItemDtlCurr: DisItemDtlCurrRow[];
+  disAddCurr: DisAddCurrRow[];
+  disDedCurr: DisDedCurrRow[];
+  disCashCurr: DisCashCurrRow[];
+  disCheckCurr: DisCheckCurrRow[];
+  disPlanCurr: DisPlanCurrRow[];
   depositSlip: DepositSlipRow[];
   foControl: FoControlRow[];
-  /** Raw TRANEXT rows by code (RB–RF, VA–VH, …) after ImportFile. */
+  /** Raw TRANEXT rows by code after ImportFile (audit / unknown codes). */
   tranextRaw: Record<string, Record<string, string | number>[]>;
   intInpFl: IntInpFlRow[];
   glwDtl: GlwDtlStoreRow[];
@@ -245,6 +491,19 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     apDeposits: seed?.apDeposits ? [...seed.apDeposits] : [],
     apDepositX: seed?.apDepositX ? [...seed.apDepositX] : [],
     orMainCurr: seed?.orMainCurr ? [...seed.orMainCurr] : [],
+    orItemCurr: seed?.orItemCurr ? [...seed.orItemCurr] : [],
+    orItemDtlCurr: seed?.orItemDtlCurr ? [...seed.orItemDtlCurr] : [],
+    orCashCurr: seed?.orCashCurr ? [...seed.orCashCurr] : [],
+    orCheckCurr: seed?.orCheckCurr ? [...seed.orCheckCurr] : [],
+    orAprCurr: seed?.orAprCurr ? [...seed.orAprCurr] : [],
+    disMainCurr: seed?.disMainCurr ? [...seed.disMainCurr] : [],
+    disItemCurr: seed?.disItemCurr ? [...seed.disItemCurr] : [],
+    disItemDtlCurr: seed?.disItemDtlCurr ? [...seed.disItemDtlCurr] : [],
+    disAddCurr: seed?.disAddCurr ? [...seed.disAddCurr] : [],
+    disDedCurr: seed?.disDedCurr ? [...seed.disDedCurr] : [],
+    disCashCurr: seed?.disCashCurr ? [...seed.disCashCurr] : [],
+    disCheckCurr: seed?.disCheckCurr ? [...seed.disCheckCurr] : [],
+    disPlanCurr: seed?.disPlanCurr ? [...seed.disPlanCurr] : [],
     depositSlip: seed?.depositSlip ? [...seed.depositSlip] : [],
     foControl: seed?.foControl ? [...seed.foControl] : [],
     tranextRaw: seed?.tranextRaw ? { ...seed.tranextRaw } : {},

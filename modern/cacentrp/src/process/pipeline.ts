@@ -42,7 +42,7 @@ export const DAILY_STAGES: PipelineStage[] = [
     title: "TRANEXT DBF → working tables",
     window: "w_unload wf_write2*",
     status: "ported",
-    notes: "ImportFile CS/DA/RA/… → CASHBALANCE / DEPOSITSLIP / ORMAINCURR + raw packs",
+    notes: "ImportFile CS/DA/RA–RF/VA–VH → typed OR/DIS/cash/deposit working tables",
   },
   {
     id: "focus-map",
