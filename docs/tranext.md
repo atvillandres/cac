@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-ALAI FOCUS (`w_alaifocusproc`) polish.
+FOCUS OR/DIS check-path DataWindow depth.

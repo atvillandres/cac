@@ -17,12 +17,37 @@ export interface BdoApMstRow {
   userId: string;
 }
 
+/** Port of UNBALDOC (f_write2unbaldoc) — per-document DR/CR mismatch. */
+export interface UnbalDocRow {
+  compCode: string;
+  foCode: string;
+  sourceType: string;
+  docNum: string;
+  totalDebit: number;
+  totalCredit: number;
+  fileName: string;
+  processDate: string;
+  userId: string;
+}
+
 export interface CashBalanceRow {
   company: string;
   foCode: string;
   cashBal: number;
   tranDate: string;
   currency: string;
+}
+
+/** Port of ERRCASHBAL — FO vs CAC excess-cash mismatch from wf_balentries. */
+export interface ErrCashBalRow {
+  compCode: string;
+  foCode: string;
+  tranDate: string;
+  foBal: number;
+  cacBal: number;
+  currency: string;
+  processDate: string;
+  userId: string;
 }
 
 export interface ApTransStoreRow {
@@ -543,6 +568,8 @@ export interface DailyStore {
   currLedge: CurrLedgeRow[];
   currLedgeX: CurrLedgeRow[];
   unbalCurrLedge: CurrLedgeRow[];
+  unbalDocs: UnbalDocRow[];
+  errCashBal: ErrCashBalRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -587,6 +614,8 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     currLedge: seed?.currLedge ? [...seed.currLedge] : [],
     currLedgeX: seed?.currLedgeX ? [...seed.currLedgeX] : [],
     unbalCurrLedge: seed?.unbalCurrLedge ? [...seed.unbalCurrLedge] : [],
+    unbalDocs: seed?.unbalDocs ? [...seed.unbalDocs] : [],
+    errCashBal: seed?.errCashBal ? [...seed.errCashBal] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
