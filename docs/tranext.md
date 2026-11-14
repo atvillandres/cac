@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-Richer OR/DIS check DataWindow column joins for FOCUS (tender gate + `orCheck`/`disCheck` bridge done).
+USD COLL `CSHD`/`CHKD` + DIS check bank-code join depth (OR short/over + cancelled-OR filter + richer check fields done).

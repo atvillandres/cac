@@ -836,6 +836,126 @@ const STAGE_ORDER =
   check(store.bdoApMst[0]!.status === "K", "BDOAPMST K for missing 105");
 }
 
+// Within-tol short/over → adjust first item + ORSHORTOVER
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  store.orItemDtlCurr.push({
+    company: "ALAI",
+    foCode: "001",
+    orNo: "ORADJ001",
+    orDate: today,
+    grpItemNo: 1,
+    itemNo: 1,
+    payType: "CSH",
+    orItemAmt: 5000,
+    dueDate: "",
+    ssiYrMm: "",
+    remarks: "",
+    postTag: "",
+    orItemDtlT: "",
+    processDate: today,
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORADJ001",
+        orDate: today,
+        currency: "PHP",
+        cashAmt: 5050,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORADJ001",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 5000,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `short/over adjust failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(store.orShortOver.length === 1, "ORSHORTOVER row");
+  check(store.orShortOver[0]!.oldAmt === 5000 && store.orShortOver[0]!.newAmt === 5050, "adjusted amts");
+  check(
+    store.focusWorkingX[0]?.orItemDtlCurr[0]?.orItemAmt === 5050,
+    "archived ORITEMDTL reflects adjust",
+  );
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORADJ001" && r.acctCode === "401001" && r.amount === 5050),
+    "mapped premium uses adjusted amt",
+  );
+}
+
+// Within-tol excess → insert param-103 line (ALAI LSP path)
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orShortOverMode: "insert",
+    orCash: [
+      {
+        orNo: "ORINS001",
+        orDate: today,
+        currency: "PHP",
+        cashAmt: 5025,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORINS001",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 5000,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `short/over insert failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(store.orShortOver.length === 1 && store.orShortOver[0]!.itemNo === 2, "ORSHORTOVER insert item");
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORINS001" && r.tranType === "OREX" && r.amount === 25),
+    "excess line mapped",
+  );
+  check(
+    store.focusWorkingX[0]?.orItemDtlCurr.some((r) => r.orNo === "ORINS001" && r.itemNo === 2),
+    "new ORITEMDTL archived *X",
+  );
+}
+
 // CDR happy path
 {
   const store = createStore();
