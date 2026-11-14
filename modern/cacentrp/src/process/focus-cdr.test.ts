@@ -41,6 +41,7 @@ const STAGE_ORDER =
   check(totals.debit === totals.credit, `FOCUS imbalance DR=${totals.debit} CR=${totals.credit}`);
   check(store.currLedge.length === result.mapFocus.length, "currledge not persisted");
   check(store.bdoApMst[0].status === "L", "BDOAPMST should be L");
+  check(store.focusWorkingX.length === 1, "success archives *X");
 }
 
 // FOCUS missing param 101
@@ -619,6 +620,220 @@ const STAGE_ORDER =
   check(store.errCashBal.length === 1, "ERRCASHBAL row");
   check(store.errCashBal[0].foBal === 50 && store.errCashBal[0].cacBal === 99, "bal amounts");
   check(store.bdoApMst[0].status === "I", "BDOAPMST I");
+}
+
+// Explicit OR/DIS check tender mapping + *X archive of working checks
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  store.orCheckCurr.push({
+    company: "ALAI",
+    foCode: "001",
+    orNo: "ORCHK001",
+    orDate: today,
+    checkItemNo: 1,
+    checkNo: "CHK100",
+    checkDate: today,
+    currency: "PHP",
+    checkAmt: 2000,
+    checkClrTy: "",
+    dsSeqNo: "",
+    checkType: "",
+    checkTypeD: "",
+    bankBranch: "",
+    processDate: today,
+  });
+  store.disCheckCurr.push({
+    company: "ALAI",
+    foCode: "001",
+    disForm: "",
+    disNo: "DSCHK001",
+    disDate: today,
+    checkItemNo: 1,
+    checkNo: "CHK200",
+    checkDate: today,
+    bankCode: "BDO",
+    bankBranch: "",
+    currency: "PHP",
+    checkAmt: 2000,
+    payee: "PAYEE",
+    processDate: today,
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [],
+    orCheck: [
+      {
+        orNo: "ORCHK001",
+        orDate: today,
+        currency: "PHP",
+        checkAmt: 2000,
+        payType: "CHK",
+        acctType: "ORCASH",
+        checkItemNo: 1,
+        checkNo: "CHK100",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORCHK001",
+        orDate: today,
+        itemNo: 1,
+        payType: "CHK",
+        orItemAmt: 2000,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disCheck: [
+      {
+        disNo: "DSCHK001",
+        disDate: today,
+        currency: "PHP",
+        checkAmt: 2000,
+        payType: "CHK",
+        acctType: "DISCASH",
+        checkItemNo: 1,
+        checkNo: "CHK200",
+        bankCode: "BDO",
+      },
+    ],
+    disItems: [
+      {
+        disNo: "DSCHK001",
+        disDate: today,
+        itemNo: 1,
+        disAmt: 2000,
+        payType: "CHK",
+        acctType: "DISPREM",
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `check path failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORCHK001" && r.payType === "Q" && r.controlNo === "CHK100"),
+    "OR check mapped payType Q",
+  );
+  check(
+    result.mapFocus.some((r) => r.refNo === "DSCHK001" && r.payType === "Q"),
+    "DIS check mapped",
+  );
+  check(store.focusWorkingX.length === 1, "check path *X");
+  check(store.focusWorkingX[0]!.orCheckCurr.length === 1, "ORCHECK archived *X");
+  check(store.focusWorkingX[0]!.disCheckCurr.length === 1, "DISCHECK archived *X");
+  check(store.orCheckCurr.length === 0 && store.disCheckCurr.length === 0, "live checks cleared");
+}
+
+// ORAMTPDFAIL — OR items with no cash/check → BDO J
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [],
+    orCheck: [],
+    orItems: [
+      {
+        orNo: "ORNOPAY",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 100,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "missing payment should fail");
+  check(store.orAmtPdFail.length === 1 && store.orAmtPdFail[0]!.refNo === "ORNOPAY", "ORAMTPDFAIL");
+  check(store.bdoApMst[0]!.status === "J", "BDOAPMST J");
+  check(result.stages.some((s) => s.stage === "reject"), "reject after ORAMTPDFAIL");
+}
+
+// ORSHRTEXEFAIL — |paid − items| > param 105 → BDO K
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORSHORT",
+        orDate: today,
+        currency: "PHP",
+        cashAmt: 500,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORSHORT",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 800,
+        acctType: "ORPREM",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "excess/short should fail");
+  check(store.orShrtExeFail.length === 1, "ORSHRTEXEFAIL");
+  check(store.orShrtExeFail[0]!.exeShrtAmt === -300, "short amount");
+  check(store.bdoApMst[0]!.status === "K", "BDOAPMST K");
+}
+
+// Missing param 105 → collection reject K
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const input = demoFocusInput();
+  input.params = { ...input.params, orExcessShortTol: undefined };
+  const result = runFocusMapping(store, input);
+  check(!result.ok, "missing 105 should fail");
+  check(result.stages[0]?.detail.includes("105"), "param 105 message");
+  check(store.bdoApMst[0]!.status === "K", "BDOAPMST K for missing 105");
 }
 
 // CDR happy path

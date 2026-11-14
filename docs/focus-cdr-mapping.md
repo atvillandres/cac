@@ -10,14 +10,14 @@
 
 ## FOCUS / ALAI `ue_process` stages
 
-1. Load params: SYRCACPARAM `101` (excess cash), `102` (cash clearing), `106` (gain/loss); SYRUNIT for FO unit  
+1. Load params: SYRCACPARAM `101` (excess cash), `102` (cash clearing), `105` (OR excess/short tol), `106` (gain/loss); SYRUNIT for FO unit  
 2. Retrieve OR cash / check / item / unique DataWindows  
-3. **`wf_processcollection`**  
+3. **`wf_processcollection`** — gate each OR: must appear in cash and/or check (`ORAMTPDFAIL` → BDO **`J`**); `|paid − items|` ≤ param **105** (`ORSHRTEXEFAIL` → **`K`**); map cash + **check** + items  
 4. **`wf_proccollpdr`** (when OR items match `SYRPDRPARM.TRANTYPE`)  
-5. **`wf_processdisbursement`** (maps DIS + **add/ded**; applies **`wf_spcexcsh`**; ends with **`wf_fundtransfer`**, then **`wf_procdisbnet`** when `SYRNETPARM` products exist)  
+5. **`wf_processdisbursement`** (maps DIS cash + **check** + items + **add/ded**; applies **`wf_spcexcsh`**; ends with **`wf_fundtransfer`**, then **`wf_procdisbnet`** when `SYRNETPARM` products exist)  
 6. **`wf_processdeposit`**  
 7. **`wf_balentries`** — trial must balance (else BDO **`H`**); excess-cash PHP/USD vs `CASHBALANCE` (else `ERRCASHBAL` + **`I`**)  
-8. **`wf_processcomplete('L')`** → write `dw_mapfocus` → `CURRLEDGE`, archive working `*` → `*X`, Success.bat  
+8. **`wf_processcomplete('L')`** → write `dw_mapfocus` → `CURRLEDGE`, archive working `*` → `*X` (`focusWorkingX`), Success.bat  
 
 **Add/ded** maps `DISADDAMT` / `DISDEDAMT` lines; skips SYRBANK and `wf_spcexcsh` hits.  
 **Net disbursement (`wf_procdisbnet`)** maps cash-net / check-net at `disnetamt`; skips SYRBANK on non-bank pass; check path posts bank lines as **CR**; all-bank check docs defer to fund transfer; USD param-**106** × booking rate → PHP.
@@ -45,10 +45,10 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 
 - `src/process/currledge.ts` — structure + helpers (`numberSign` optional)  
 - `src/process/focus.ts` — stage pipeline (collection → collPdr → disbursement → disAddDed → fundTransfer → disbNet → deposit → balance → complete)  
-- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`), `focusWorkingU` (`*U` reject archive)  
+- `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`), `orAmtPdFail` / `orShrtExeFail`, `focusWorkingU` (`*U`) / `focusWorkingX` (`*X`)  
 - `src/process/cdr.ts` — APTRANS/APDEPOSIT mapper  
 - CLI: `cacentrp daily focus` / `cacentrp daily cdr`
 
 ## Still pending
 
-Full DataWindow SQL joins for OR/DIS check paths; SYRADJPARM adj loop is empty in extracted PB source.
+Richer OR/DIS check DataWindow column joins (beyond tender amounts / check no); SYRADJPARM adj loop is empty in extracted PB source.

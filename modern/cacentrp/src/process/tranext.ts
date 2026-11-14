@@ -1199,26 +1199,26 @@ export function write2TranextCode(
  */
 export function focusWorkingFromStore(store: DailyStore): Pick<
   FocusInput,
-  "orCash" | "orItems" | "disCash" | "disItems" | "deposits"
+  "orCash" | "orCheck" | "orItems" | "disCash" | "disCheck" | "disItems" | "deposits"
 > {
-  const orCash: OrCashRow[] = [
-    ...store.orCashCurr.map((r) => ({
-      orNo: r.orNo,
-      orDate: r.orDate,
-      currency: r.currency || "PHP",
-      cashAmt: r.cashAmt,
-      payType: "CSH",
-      acctType: "ORCASH",
-    })),
-    ...store.orCheckCurr.map((r) => ({
-      orNo: r.orNo,
-      orDate: r.orDate,
-      currency: r.currency || "PHP",
-      cashAmt: r.checkAmt,
-      payType: "CHK",
-      acctType: "ORCASH",
-    })),
-  ];
+  const orCash: OrCashRow[] = store.orCashCurr.map((r) => ({
+    orNo: r.orNo,
+    orDate: r.orDate,
+    currency: r.currency || "PHP",
+    cashAmt: r.cashAmt,
+    payType: "CSH",
+    acctType: "ORCASH",
+  }));
+  const orCheck = store.orCheckCurr.map((r) => ({
+    orNo: r.orNo,
+    orDate: r.orDate,
+    currency: r.currency || "PHP",
+    checkAmt: r.checkAmt,
+    payType: "CHK" as const,
+    acctType: "ORCASH",
+    checkItemNo: r.checkItemNo,
+    checkNo: r.checkNo,
+  }));
   const orItems: OrItemRow[] = store.orItemDtlCurr.map((r) => ({
     orNo: r.orNo,
     orDate: r.orDate,
@@ -1227,24 +1227,25 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
     orItemAmt: r.orItemAmt,
     acctType: r.payType || "ORPREM",
   }));
-  const disCash: DisCashRow[] = [
-    ...store.disCashCurr.map((r) => ({
-      disNo: r.disNo,
-      disDate: r.disDate,
-      currency: r.currency || "PHP",
-      cashAmt: r.cashAmt,
-      payType: "CSH",
-      acctType: "DISCASH",
-    })),
-    ...store.disCheckCurr.map((r) => ({
-      disNo: r.disNo,
-      disDate: r.disDate,
-      currency: r.currency || "PHP",
-      cashAmt: r.checkAmt,
-      payType: "CHK",
-      acctType: "DISCASH",
-    })),
-  ];
+  const disCash: DisCashRow[] = store.disCashCurr.map((r) => ({
+    disNo: r.disNo,
+    disDate: r.disDate,
+    currency: r.currency || "PHP",
+    cashAmt: r.cashAmt,
+    payType: "CSH",
+    acctType: "DISCASH",
+  }));
+  const disCheck = store.disCheckCurr.map((r) => ({
+    disNo: r.disNo,
+    disDate: r.disDate,
+    currency: r.currency || "PHP",
+    checkAmt: r.checkAmt,
+    payType: "CHK" as const,
+    acctType: "DISCASH",
+    checkItemNo: r.checkItemNo,
+    checkNo: r.checkNo,
+    bankCode: r.bankCode,
+  }));
   const disItems: DisItemRow[] = store.disItemDtlCurr.map((r) => ({
     disNo: r.disNo,
     disDate: r.disDate,
@@ -1260,7 +1261,7 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
     bankAcct: r.acctCode || r.bankAcctNo,
     currency: r.currency,
   }));
-  return { orCash, orItems, disCash, disItems, deposits };
+  return { orCash, orCheck, orItems, disCash, disCheck, disItems, deposits };
 }
 
 export interface TranextLoadInput {

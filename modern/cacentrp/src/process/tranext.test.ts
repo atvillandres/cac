@@ -130,7 +130,8 @@ check(store.disCashCurr[0]!.cashAmt === 1000, "VF");
 
 const focusSets = focusWorkingFromStore(store);
 check(focusSets.orItems!.length === 1, "focus orItems from RC");
-check(focusSets.orCash!.some((r) => r.payType === "CHK"), "focus orCash from RE");
+check(focusSets.orCheck!.length === 1 && focusSets.orCheck![0]!.checkAmt === 444000, "focus orCheck from RE");
+check(focusSets.orCash!.every((r) => r.payType === "CSH"), "focus orCash cash-only");
 check(focusSets.disItems!.length === 1, "focus disItems from VC");
 check(focusSets.disCash!.length === 1, "focus disCash from VF");
 check(focusSets.deposits!.length === 1, "focus deposits from DA");

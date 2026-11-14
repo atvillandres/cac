@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-FOCUS OR/DIS check-path DataWindow depth.
+Richer OR/DIS check DataWindow column joins for FOCUS (tender gate + `orCheck`/`disCheck` bridge done).

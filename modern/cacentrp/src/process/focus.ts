@@ -33,6 +33,18 @@ export interface OrCashRow {
   acctType: string; // maps to ACCTENT.TRANTYPE
 }
 
+/** Explicit OR check tender (ORCHECKCURR / dw_maporcheckcurr). */
+export interface OrCheckRow {
+  orNo: string;
+  orDate: string;
+  currency: string;
+  checkAmt: number;
+  acctType: string;
+  payType?: string;
+  checkItemNo?: number;
+  checkNo?: string;
+}
+
 export interface OrItemRow {
   orNo: string;
   orDate: string;
@@ -67,6 +79,19 @@ export interface DisCashRow {
   cashAmt: number;
   payType?: string;
   acctType: string;
+}
+
+/** Explicit DIS check tender (DISCHECKCURR). */
+export interface DisCheckRow {
+  disNo: string;
+  disDate: string;
+  currency: string;
+  checkAmt: number;
+  acctType: string;
+  payType?: string;
+  checkItemNo?: number;
+  checkNo?: string;
+  bankCode?: string;
 }
 
 export interface DisItemRow {
@@ -173,11 +198,20 @@ export interface FocusInput {
   acctEnt: AcctEntRule[];
   userId: string;
   orCash?: OrCashRow[];
+  /** Explicit OR checks (also accept payType=CHK folded into orCash). */
+  orCheck?: OrCheckRow[];
   orItems?: OrItemRow[];
+  /**
+   * When true (default), validate each OR has cash and/or check coverage and
+   * |paid − items| ≤ param 105 before mapping (legacy collection gate).
+   */
+  validateOrPayments?: boolean;
   /** SYRPDRPARM.TRANTYPE list for the company — gates PDR mapping. */
   pdrTranTypes?: string[];
   pdrItems?: PdrItemRow[];
   disCash?: DisCashRow[];
+  /** Explicit DIS checks (also accept payType=CHK folded into disCash). */
+  disCheck?: DisCheckRow[];
   disItems?: DisItemRow[];
   /** DIS add/ded mapped lines (inside wf_processdisbursement in legacy). */
   disAddDedLines?: DisAddDedLine[];
@@ -212,6 +246,8 @@ export interface FocusStageResult {
   ok: boolean;
   detail: string;
   rowsAdded: number;
+  /** BDOAPMST status to apply on failure (e.g. J / K from collection). */
+  rejectStatus?: string;
 }
 
 export interface FocusResult {
@@ -384,7 +420,114 @@ function updateBdoStatus(store: DailyStore, input: FocusInput, status: string): 
   return updated;
 }
 
-export function processCollection(input: FocusInput, out: CurrLedgeRow[]): FocusStageResult {
+function orPaymentTotals(
+  input: FocusInput,
+  orNo: string,
+): { cash: number; check: number } {
+  let cash = 0;
+  let check = 0;
+  for (const row of input.orCash ?? []) {
+    if (row.orNo !== orNo) continue;
+    if ((row.payType ?? "CSH").trim().toUpperCase() === "CHK") {
+      check = round2(check + row.cashAmt);
+    } else {
+      cash = round2(cash + row.cashAmt);
+    }
+  }
+  for (const row of input.orCheck ?? []) {
+    if (row.orNo !== orNo) continue;
+    check = round2(check + row.checkAmt);
+  }
+  return { cash, check };
+}
+
+/**
+ * Legacy collection gate: each OR must appear in cash and/or check;
+ * |paid − item total| must be within SYRCACPARAM 105.
+ */
+export function validateOrCashCheckPayments(
+  store: DailyStore,
+  input: FocusInput,
+): FocusStageResult | null {
+  if (input.validateOrPayments === false) return null;
+
+  const orNos = new Set<string>();
+  for (const r of input.orItems ?? []) orNos.add(r.orNo);
+  for (const r of input.orCash ?? []) orNos.add(r.orNo);
+  for (const r of input.orCheck ?? []) orNos.add(r.orNo);
+  if (orNos.size === 0) return null;
+
+  if (input.params.orExcessShortTol == null) {
+    return {
+      stage: "collection",
+      ok: false,
+      detail: "PARAMCHAR for PARAMTYPE 105 not found",
+      rowsAdded: 0,
+      rejectStatus: "K",
+    };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tol = input.params.orExcessShortTol;
+
+  for (const orNo of orNos) {
+    const { cash, check } = orPaymentTotals(input, orNo);
+    if (cash === 0 && check === 0) {
+      store.orAmtPdFail.push({
+        compCode: input.proc.compCode,
+        foCode: input.proc.foCode,
+        tranDate: input.proc.dateRec,
+        refNo: orNo,
+        processDate: today,
+        userId: input.userId,
+      });
+      return {
+        stage: "collection",
+        ok: false,
+        detail: `OR ${orNo} not found in ORCASHCURR/ORCHECKCURR; ORAMTPDFAIL`,
+        rowsAdded: 0,
+        rejectStatus: "J",
+      };
+    }
+
+    const itemTotal = round2(
+      (input.orItems ?? [])
+        .filter((r) => r.orNo === orNo)
+        .reduce((s, r) => s + r.orItemAmt, 0),
+    );
+    if ((input.orItems ?? []).some((r) => r.orNo === orNo)) {
+      const exeShort = round2(cash + check - itemTotal);
+      if (Math.abs(exeShort) > tol) {
+        store.orShrtExeFail.push({
+          compCode: input.proc.compCode,
+          foCode: input.proc.foCode,
+          tranDate: input.proc.dateRec,
+          refNo: orNo,
+          exeShrtAmt: exeShort,
+          processDate: today,
+          userId: input.userId,
+        });
+        return {
+          stage: "collection",
+          ok: false,
+          detail: `OR ${orNo} excess/short ${exeShort} exceeds param 105 (${tol}); ORSHRTEXEFAIL`,
+          rowsAdded: 0,
+          rejectStatus: "K",
+        };
+      }
+    }
+  }
+  return null;
+}
+
+export function processCollection(
+  store: DailyStore,
+  input: FocusInput,
+  out: CurrLedgeRow[],
+): FocusStageResult {
+  const gate = validateOrCashCheckPayments(store, input);
+  if (gate) return gate;
+
   let added = 0;
   const ctx = {
     sourceType: "FC",
@@ -408,7 +551,30 @@ export function processCollection(input: FocusInput, out: CurrLedgeRow[]): Focus
       row.cashAmt,
       ctx,
     );
-    if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added };
+    if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
+    added++;
+  }
+  for (const row of input.orCheck ?? []) {
+    const payType = row.payType ?? "CHK";
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType);
+    const err = pushMapped(
+      out,
+      rule,
+      {
+        foCode: input.proc.foCode,
+        refNo: row.orNo,
+        refDate: row.orDate,
+        itemNo: row.checkItemNo,
+        origCy: row.currency,
+        locCy: "PHP",
+        payType: normalizePayType(payType),
+        unit: input.params.foUnit ?? "",
+        controlNo: row.checkNo ?? "",
+      },
+      row.checkAmt,
+      ctx,
+    );
+    if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
   }
   for (const row of input.orItems ?? []) {
@@ -428,7 +594,7 @@ export function processCollection(input: FocusInput, out: CurrLedgeRow[]): Focus
       row.orItemAmt,
       ctx,
     );
-    if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added };
+    if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
   }
   return {
@@ -506,6 +672,28 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
         unit: input.params.foUnit ?? "",
       },
       row.cashAmt,
+      ctx,
+    );
+    if (err) return { stage: "disbursement", ok: false, detail: err, rowsAdded: added };
+    added++;
+  }
+  for (const row of input.disCheck ?? []) {
+    const payType = row.payType ?? "CHK";
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType);
+    const err = pushMapped(
+      out,
+      rule,
+      {
+        foCode: input.proc.foCode,
+        refNo: row.disNo,
+        refDate: row.disDate,
+        itemNo: row.checkItemNo,
+        origCy: row.currency,
+        payType: normalizePayType(payType),
+        unit: input.params.foUnit ?? "",
+        controlNo: row.checkNo ?? row.bankCode ?? "",
+      },
+      row.checkAmt,
       ctx,
     );
     if (err) return { stage: "disbursement", ok: false, detail: err, rowsAdded: added };
@@ -1073,10 +1261,20 @@ export function processComplete(
   mapFocus: CurrLedgeRow[],
   status: string,
 ): FocusStageResult {
-  // Archive working cash balance snapshot if present
+  // Legacy: default empty LOB → CORP
+  for (const row of mapFocus) {
+    if (!row.lob || !row.lob.trim()) row.lob = "CORP";
+  }
+
+  // Archive working tables → *X (cashBalanceX kept for CDR/compat)
   if (store.cashBalance.length) {
     store.cashBalanceX.push(...store.cashBalance.map((r) => ({ ...r })));
   }
+  const snap = snapshotFocusWorking(store);
+  const archived = countWorkingRows(snap);
+  store.focusWorkingX.push(snap);
+  clearFocusWorking(store);
+
   // Commit mapfocus → CURRLEDGE
   store.currLedge.push(...mapFocus.map((r) => ({ ...r })));
 
@@ -1085,7 +1283,7 @@ export function processComplete(
   return {
     stage: "complete",
     ok: true,
-    detail: `Wrote ${mapFocus.length} CURRLEDGE row(s); BDOAPMST status=${status} (${updated} updated)`,
+    detail: `Wrote ${mapFocus.length} CURRLEDGE row(s); archived *X (${archived} working); BDOAPMST status=${status} (${updated} updated)`,
     rowsAdded: mapFocus.length,
   };
 }
@@ -1157,8 +1355,13 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
   const mapFocus: CurrLedgeRow[] = [];
   const stages: FocusStageResult[] = [];
 
+  const collection = processCollection(store, input, mapFocus);
+  stages.push(collection);
+  if (!collection.ok) {
+    return failFocus(store, input, stages, mapFocus, collection.rejectStatus ?? "J");
+  }
+
   const early: Array<(i: FocusInput, o: CurrLedgeRow[]) => FocusStageResult> = [
-    processCollection,
     processCollPdr,
     processDisbursement,
     processDisAddDed,
@@ -1167,7 +1370,7 @@ export function runFocusMapping(store: DailyStore, input: FocusInput): FocusResu
     const result = step(input, mapFocus);
     stages.push(result);
     if (!result.ok) {
-      return failFocus(store, input, stages, mapFocus, "J");
+      return failFocus(store, input, stages, mapFocus, result.rejectStatus ?? "J");
     }
   }
 
