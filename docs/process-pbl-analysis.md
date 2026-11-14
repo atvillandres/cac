@@ -51,7 +51,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp|inspect`)
 - End-of-day against in-memory ledger store
 - Unload orchestrator with optional mapDownstream → FOCUS/CDR/BPY/GRP — see [`docs/unload.md`](unload.md)
-- FOCUS / CDR → `CURRLEDGE` mapping (PDR / add-ded / `wf_spcexcsh` / fund transfer / net DIS / UNBALDOC / ERRCASHBAL / param 106) — see [`docs/focus-cdr-mapping.md`](focus-cdr-mapping.md)
+- FOCUS / CDR → `CURRLEDGE` mapping (PDR / add-ded / `wf_spcexcsh` / fund transfer / net DIS / UNBALDOC / ERRCASHBAL / `wf_processreject` `*U` / param 106) — see [`docs/focus-cdr-mapping.md`](focus-cdr-mapping.md)
 - GL Walker NLSP + LSP `GLWDTL` → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
 - LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
 - BRS `.ALI` upload — see [`docs/brs-upload.md`](brs-upload.md)

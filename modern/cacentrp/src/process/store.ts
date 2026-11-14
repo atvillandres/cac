@@ -477,6 +477,29 @@ export interface DisPlanCurrRow {
   processDate: string;
 }
 
+/**
+ * Port of FOCUS `*U` reject archives (wf_processreject) — snapshot of
+ * OR/DIS/cash/deposit working tables moved off the live tables on failure.
+ */
+export interface FocusWorkingSnapshot {
+  cashBalance: CashBalanceRow[];
+  orMainCurr: OrMainCurrRow[];
+  orItemCurr: OrItemCurrRow[];
+  orItemDtlCurr: OrItemDtlCurrRow[];
+  orCashCurr: OrCashCurrRow[];
+  orCheckCurr: OrCheckCurrRow[];
+  orAprCurr: OrAprCurrRow[];
+  disMainCurr: DisMainCurrRow[];
+  disItemCurr: DisItemCurrRow[];
+  disItemDtlCurr: DisItemDtlCurrRow[];
+  disAddCurr: DisAddCurrRow[];
+  disDedCurr: DisDedCurrRow[];
+  disCashCurr: DisCashCurrRow[];
+  disCheckCurr: DisCheckCurrRow[];
+  disPlanCurr: DisPlanCurrRow[];
+  depositSlip: DepositSlipRow[];
+}
+
 /** Port of ORRTRNCURR (wf_write2rc1 / RC1.DBF) — OR check return. */
 export interface OrRtrnCurrRow {
   company: string;
@@ -570,6 +593,8 @@ export interface DailyStore {
   unbalCurrLedge: CurrLedgeRow[];
   unbalDocs: UnbalDocRow[];
   errCashBal: ErrCashBalRow[];
+  /** Reject archives (`*U`); one snapshot per wf_processreject. */
+  focusWorkingU: FocusWorkingSnapshot[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -616,6 +641,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     unbalCurrLedge: seed?.unbalCurrLedge ? [...seed.unbalCurrLedge] : [],
     unbalDocs: seed?.unbalDocs ? [...seed.unbalDocs] : [],
     errCashBal: seed?.errCashBal ? [...seed.errCashBal] : [],
+    focusWorkingU: seed?.focusWorkingU ? seed.focusWorkingU.map((s) => ({ ...s })) : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],

@@ -200,6 +200,8 @@ const STAGE_ORDER =
   check(store.unbalDocs[0].totalDebit === 500 && store.unbalDocs[0].totalCredit === 300, "amounts");
   check(store.bdoApMst[0].status === "Q", "BDOAPMST Q on unbal doc");
   check(store.currLedge.length === 0, "should not commit on failure");
+  check(result.stages.some((s) => s.stage === "reject"), "reject stage");
+  check(store.unbalCurrLedge.length === result.mapFocus.length, "mapfocus→unbalCurrLedge");
 }
 
 // numbersign helper
@@ -519,10 +521,23 @@ const STAGE_ORDER =
       bankAcct: "BNK001",
     },
   ];
+  store.orCashCurr.push({
+    company: "ALAI",
+    foCode: "001",
+    orNo: "OR000001",
+    orDate: input.proc.dateRec,
+    currency: "PHP",
+    cashAmt: 1,
+    dsSeqNo: "",
+    processDate: input.proc.dateRec,
+  });
   const result = runFocusMapping(store, input);
   check(!result.ok, "trial imbalance should fail");
   check(store.bdoApMst[0].status === "H", "BDOAPMST H");
   check(result.stages.some((s) => s.stage === "balance" && !s.ok), "balance failed");
+  check(result.stages.some((s) => s.stage === "reject"), "reject after balance fail");
+  check(store.focusWorkingU.length === 1, "working archived to *U");
+  check(store.orCashCurr.length === 0, "live OR cash cleared");
 }
 
 // Excess-cash vs CASHBALANCE mismatch → ERRCASHBAL + I
