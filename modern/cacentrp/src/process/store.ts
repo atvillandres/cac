@@ -51,6 +51,20 @@ export interface OrShrtExeFailRow {
   userId: string;
 }
 
+/** Port of ORSHORTOVER — audit when paid ≠ items but within param 105. */
+export interface OrShortOverRow {
+  coCode: string;
+  foCode: string;
+  orNo: string;
+  itemNo: number;
+  /** Legacy STATAG — 'H' for handled short/over. */
+  statAg: string;
+  newAmt: number;
+  oldAmt: number;
+  processDate: string;
+  userId: string;
+}
+
 export interface CashBalanceRow {
   company: string;
   foCode: string;
@@ -622,6 +636,8 @@ export interface DailyStore {
   orAmtPdFail: OrAmtPdFailRow[];
   /** ORSHRTEXEFAIL — OR excess/short beyond param 105 (collection reject K). */
   orShrtExeFail: OrShrtExeFailRow[];
+  /** ORSHORTOVER — within-tol paid vs item adjustment audit. */
+  orShortOver: OrShortOverRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -672,6 +688,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     focusWorkingX: seed?.focusWorkingX ? seed.focusWorkingX.map((s) => ({ ...s })) : [],
     orAmtPdFail: seed?.orAmtPdFail ? [...seed.orAmtPdFail] : [],
     orShrtExeFail: seed?.orShrtExeFail ? [...seed.orShrtExeFail] : [],
+    orShortOver: seed?.orShortOver ? [...seed.orShortOver] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
