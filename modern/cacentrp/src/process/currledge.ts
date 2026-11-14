@@ -59,6 +59,11 @@ export interface CacParams {
   excessCashAcct: string;
   /** PARAMTYPE 102 — FO cash clearing account */
   cashClearingAcct: string;
+  /**
+   * PARAMTYPE 105 — OR excess/short tolerance (legacy PARAMCHAR as decimal).
+   * When |cash+check − item total| exceeds this, collection rejects with BDO `K`.
+   */
+  orExcessShortTol?: number;
   /** PARAMTYPE 106 — realized gain/loss */
   realizedGainLossAcct?: string;
   foUnit?: string;
@@ -137,9 +142,9 @@ export function applyAcctEnt(
     locCy: rule.locCy ?? base.locCy ?? "PHP",
     lob: rule.lob ?? base.lob ?? "01",
     recDest: rule.recDest ?? base.recDest ?? "",
-    controlNo: rule.controlNo ?? "",
-    lspAccType: rule.lspAccType ?? "",
-    lspOrType: rule.lspOrType ?? "",
+    controlNo: rule.controlNo ?? base.controlNo ?? "",
+    lspAccType: rule.lspAccType ?? base.lspAccType ?? "",
+    lspOrType: rule.lspOrType ?? base.lspOrType ?? "",
     payType: normalizePayType(rule.payType || base.payType),
     sourceType: opts.sourceType,
     userId: opts.userId,

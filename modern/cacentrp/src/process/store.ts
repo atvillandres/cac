@@ -30,6 +30,27 @@ export interface UnbalDocRow {
   userId: string;
 }
 
+/** Port of ORAMTPDFAIL — OR missing from ORCASHCURR and ORCHECKCURR. */
+export interface OrAmtPdFailRow {
+  compCode: string;
+  foCode: string;
+  tranDate: string;
+  refNo: string;
+  processDate: string;
+  userId: string;
+}
+
+/** Port of ORSHRTEXEFAIL — OR excess/short beyond SYRCACPARAM 105. */
+export interface OrShrtExeFailRow {
+  compCode: string;
+  foCode: string;
+  tranDate: string;
+  refNo: string;
+  exeShrtAmt: number;
+  processDate: string;
+  userId: string;
+}
+
 export interface CashBalanceRow {
   company: string;
   foCode: string;
@@ -595,6 +616,12 @@ export interface DailyStore {
   errCashBal: ErrCashBalRow[];
   /** Reject archives (`*U`); one snapshot per wf_processreject. */
   focusWorkingU: FocusWorkingSnapshot[];
+  /** Success archives (`*X`); one snapshot per wf_processcomplete. */
+  focusWorkingX: FocusWorkingSnapshot[];
+  /** ORAMTPDFAIL — OR with no cash/check payment (collection reject J). */
+  orAmtPdFail: OrAmtPdFailRow[];
+  /** ORSHRTEXEFAIL — OR excess/short beyond param 105 (collection reject K). */
+  orShrtExeFail: OrShrtExeFailRow[];
   bdoApMst: BdoApMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
@@ -642,6 +669,9 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     unbalDocs: seed?.unbalDocs ? [...seed.unbalDocs] : [],
     errCashBal: seed?.errCashBal ? [...seed.errCashBal] : [],
     focusWorkingU: seed?.focusWorkingU ? seed.focusWorkingU.map((s) => ({ ...s })) : [],
+    focusWorkingX: seed?.focusWorkingX ? seed.focusWorkingX.map((s) => ({ ...s })) : [],
+    orAmtPdFail: seed?.orAmtPdFail ? [...seed.orAmtPdFail] : [],
+    orShrtExeFail: seed?.orShrtExeFail ? [...seed.orShrtExeFail] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],

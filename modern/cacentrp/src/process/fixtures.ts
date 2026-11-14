@@ -6,6 +6,7 @@ import type { CdrInput } from "./cdr.js";
 export const DEMO_PARAMS: CacParams = {
   excessCashAcct: "214000",
   cashClearingAcct: "205002",
+  orExcessShortTol: 100,
   realizedGainLossAcct: "490001",
   foUnit: "M001",
   bookingRate: 56.5,
@@ -20,6 +21,22 @@ export const DEMO_ACCTENT: AcctEntRule[] = [
     drCr: "DR",
     lob: "01",
     payType: "CSH",
+  },
+  {
+    coCode: "ALAI",
+    tranType: "ORCASH",
+    acctCode: "101001",
+    drCr: "DR",
+    lob: "01",
+    payType: "CHK",
+  },
+  {
+    coCode: "ALAI",
+    tranType: "DISCASH",
+    acctCode: "101001",
+    drCr: "CR",
+    lob: "01",
+    payType: "CHK",
   },
   {
     coCode: "ALAI",
