@@ -460,6 +460,110 @@ function orPaymentTotals(
 }
 
 /**
+ * Port of `dw_dtlcshchk` per-OR counters (`c_dtlor` / `c_cashor` / `c_checkor`).
+ */
+export interface OrDtlCshChkCounters {
+  orNo: string;
+  currency: string;
+  /** Distinct OR item lines (c_dtlor). */
+  dtlCount: number;
+  /** Cash tender rows (c_cashor). */
+  cashCount: number;
+  /** Check tender rows (c_checkor). */
+  checkCount: number;
+}
+
+export function orDtlCshChkCounters(input: FocusInput, orNo: string): OrDtlCshChkCounters {
+  const items = (input.orItems ?? []).filter((r) => r.orNo === orNo);
+  const cashRows = (input.orCash ?? []).filter(
+    (r) => r.orNo === orNo && (r.payType ?? "CSH").toUpperCase() !== "CHK",
+  );
+  const checkFromCash = (input.orCash ?? []).filter(
+    (r) => r.orNo === orNo && (r.payType ?? "").toUpperCase() === "CHK",
+  );
+  const checkRows = [
+    ...(input.orCheck ?? []).filter((r) => r.orNo === orNo),
+    ...checkFromCash,
+  ];
+  const currency =
+    items[0]?.currency ??
+    cashRows[0]?.currency ??
+    checkRows[0]?.currency ??
+    "PHP";
+  return {
+    orNo,
+    currency: currency.trim().toUpperCase() || "PHP",
+    dtlCount: items.length,
+    cashCount: cashRows.length,
+    checkCount: checkRows.length,
+  };
+}
+
+/**
+ * Legacy: cannot handle USD multi-detail with cash+check, or multi-detail with >1 check.
+ */
+export function isUnsupportedUsdMix(c: OrDtlCshChkCounters): boolean {
+  if (c.currency !== "USD") return false;
+  if (c.dtlCount <= 1) return false;
+  if (c.cashCount > 0 && c.checkCount > 0) return true;
+  if (c.checkCount > 1) return true;
+  return false;
+}
+
+export interface OrCollectionPlan {
+  counters: OrDtlCshChkCounters;
+  /** Legacy li_pymtmodes after PHP / multi-detail collapse. */
+  paymentModes: number;
+  mapCashTenders: boolean;
+  mapCheckTenders: boolean;
+  mapItems: boolean;
+  /** SRCMAP for item lines. */
+  itemSrcMap: "COLL" | "CSHD" | "CHKD";
+  /**
+   * When true (USD single-detail with both cash+check), items are omitted —
+   * tenders carry amounts via CSHD/CHKD (c_usdcollcash + c_usdcollcheck).
+   */
+  tenderAmountPath: boolean;
+}
+
+/**
+ * Decide collection mapping for one OR from `dw_dtlcshchk` counters.
+ */
+export function planOrCollection(input: FocusInput, orNo: string): OrCollectionPlan {
+  const counters = orDtlCshChkCounters(input, orNo);
+  const isUsd = counters.currency === "USD";
+  const multiDtl = counters.dtlCount > 1;
+  const hasCash = counters.cashCount > 0;
+  const hasCheck = counters.checkCount > 0;
+
+  // PHP or multi-detail → force single payment mode (legacy)
+  let paymentModes = 0;
+  if (hasCash) paymentModes++;
+  if (hasCheck) paymentModes++;
+  if (!isUsd || multiDtl) paymentModes = Math.min(1, paymentModes || 1);
+
+  const tenderAmountPath = isUsd && !multiDtl && hasCash && hasCheck;
+
+  let itemSrcMap: "COLL" | "CSHD" | "CHKD" = "COLL";
+  if (isUsd) {
+    if (hasCheck && !hasCash) itemSrcMap = "CHKD";
+    else if (hasCash && !hasCheck) itemSrcMap = "CSHD";
+    else if (multiDtl) itemSrcMap = hasCheck ? "CHKD" : "CSHD";
+    else itemSrcMap = "COLL"; // mixed single-detail uses tender path
+  }
+
+  return {
+    counters,
+    paymentModes: Math.max(paymentModes, 1),
+    mapCashTenders: hasCash,
+    mapCheckTenders: hasCheck,
+    mapItems: !tenderAmountPath,
+    itemSrcMap,
+    tenderAmountPath,
+  };
+}
+
+/**
  * Legacy collection gate: each OR must appear in cash and/or check;
  * |paid − item total| must be within SYRCACPARAM 105.
  */
@@ -666,6 +770,28 @@ export function processCollection(
     };
   }
 
+  const orNos = new Set<string>();
+  for (const r of input.orItems ?? []) orNos.add(r.orNo);
+  for (const r of input.orCash ?? []) orNos.add(r.orNo);
+  for (const r of input.orCheck ?? []) orNos.add(r.orNo);
+
+  const plans = new Map<string, OrCollectionPlan>();
+  for (const orNo of orNos) {
+    const counters = orDtlCshChkCounters(input, orNo);
+    if (isUnsupportedUsdMix(counters)) {
+      return {
+        stage: "collection",
+        ok: false,
+        detail:
+          `OR ${orNo} unsupported USD mix (dtl=${counters.dtlCount} cash=${counters.cashCount} ` +
+          `check=${counters.checkCount}); dw_dtlcshchk cannot handle multi-detail with multiple payment modes`,
+        rowsAdded: 0,
+        rejectStatus: "J",
+      };
+    }
+    plans.set(orNo, planOrCollection(input, orNo));
+  }
+
   let added = 0;
   const ctx = {
     sourceType: "FC",
@@ -673,20 +799,10 @@ export function processCollection(
     tranDate: input.proc.dateRec,
   };
 
-  /** Per-OR payment mix — drives COLL vs CSHD/CHKD (c_usdcoll*). */
-  const orPayMode = (orNo: string): "CSH" | "CHK" | "MIX" => {
-    const hasCash = (input.orCash ?? []).some(
-      (r) => r.orNo === orNo && (r.payType ?? "CSH").toUpperCase() !== "CHK",
-    );
-    const hasCheck =
-      (input.orCheck ?? []).some((r) => r.orNo === orNo) ||
-      (input.orCash ?? []).some((r) => r.orNo === orNo && (r.payType ?? "").toUpperCase() === "CHK");
-    if (hasCash && hasCheck) return "MIX";
-    if (hasCheck) return "CHK";
-    return "CSH";
-  };
-
   for (const row of input.orCash ?? []) {
+    const plan = plans.get(row.orNo);
+    if (plan && !plan.mapCashTenders) continue;
+    if ((row.payType ?? "CSH").toUpperCase() === "CHK") continue; // folded checks use orCheck path
     const srcMap = collectionSrcMap(row.currency, "CSH");
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
       srcMap,
@@ -711,6 +827,8 @@ export function processCollection(
     added++;
   }
   for (const row of input.orCheck ?? []) {
+    const plan = plans.get(row.orNo);
+    if (plan && !plan.mapCheckTenders) continue;
     const payType = row.payType ?? "CHK";
     const srcMap = collectionSrcMap(row.currency, "CHK");
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType, {
@@ -738,21 +856,16 @@ export function processCollection(
     added++;
   }
   for (const row of input.orItems ?? []) {
-    const cy = row.currency ?? "PHP";
-    const mode = orPayMode(row.orNo);
-    // PHP / mixed → COLL; USD cash-only → CSHD; USD check-only → CHKD
-    const srcMap =
-      cy.trim().toUpperCase() === "USD" && mode === "CHK"
-        ? "CHKD"
-        : cy.trim().toUpperCase() === "USD" && mode === "CSH"
-          ? "CSHD"
-          : "COLL";
+    const plan = plans.get(row.orNo) ?? planOrCollection(input, row.orNo);
+    if (!plan.mapItems) continue;
+    const cy = row.currency ?? plan.counters.currency;
+    const srcMap = plan.itemSrcMap;
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
       srcMap,
       origCy: cy,
     });
-    // Legacy mapfocus forces paytype Q when check present else C
-    const forcedPay = mode === "CHK" ? "CHK" : mode === "CSH" ? row.payType : "CHK";
+    // Legacy mapfocus: Q when check tenders present, else C
+    const forcedPay = plan.counters.checkCount > 0 ? "CHK" : row.payType;
     const err = pushMapped(
       out,
       rule,
@@ -771,10 +884,57 @@ export function processCollection(
     if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
   }
+
+  // USD single-detail cash+check: tenders only — add balancing premium lines per tender srcMap
+  for (const plan of plans.values()) {
+    if (!plan.tenderAmountPath) continue;
+    const orNo = plan.counters.orNo;
+    const sample = (input.orItems ?? []).find((r) => r.orNo === orNo);
+    if (!sample) continue;
+    const legs: Array<{ srcMap: "CSHD" | "CHKD"; amount: number; payType: string }> = [];
+    if (plan.mapCashTenders) {
+      const cashAmt = orPaymentTotals(input, orNo).cash;
+      if (cashAmt) legs.push({ srcMap: "CSHD", amount: cashAmt, payType: "CSH" });
+    }
+    if (plan.mapCheckTenders) {
+      const checkAmt = orPaymentTotals(input, orNo).check;
+      if (checkAmt) legs.push({ srcMap: "CHKD", amount: checkAmt, payType: "CHK" });
+    }
+    for (const leg of legs) {
+      const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, sample.acctType, sample.payType, {
+        srcMap: leg.srcMap,
+        origCy: "USD",
+      });
+      const err = pushMapped(
+        out,
+        rule,
+        {
+          foCode: input.proc.foCode,
+          refNo: orNo,
+          refDate: sample.orDate,
+          itemNo: sample.itemNo,
+          origCy: "USD",
+          payType: normalizePayType(leg.payType),
+          unit: input.params.foUnit ?? "",
+        },
+        leg.amount,
+        ctx,
+      );
+      if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
+      added++;
+    }
+  }
+
+  const planSummary = [...plans.values()]
+    .map(
+      (p) =>
+        `${p.counters.orNo}:dtl=${p.counters.dtlCount}/csh=${p.counters.cashCount}/chk=${p.counters.checkCount}/modes=${p.paymentModes}`,
+    )
+    .join("; ");
   return {
     stage: "collection",
     ok: true,
-    detail: `Mapped ${added} OR collection line(s)`,
+    detail: `Mapped ${added} OR collection line(s)${planSummary ? ` [${planSummary}]` : ""}`,
     rowsAdded: added,
   };
 }
