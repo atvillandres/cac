@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-USD COLL `CSHD`/`CHKD` + DIS check bank-code join depth (OR short/over + cancelled-OR filter + richer check fields done).
+Multi-detail USD mix / `dw_dtlcshchk` counters (USD `CSHD`/`CHKD` + DIS bank join done).

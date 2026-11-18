@@ -12,6 +12,7 @@
  */
 import {
   applyAcctEnt,
+  collectionSrcMap,
   debitCreditTotals,
   matchAcctEnt,
   normalizeDrCrAmount,
@@ -671,8 +672,26 @@ export function processCollection(
     userId: input.userId,
     tranDate: input.proc.dateRec,
   };
+
+  /** Per-OR payment mix — drives COLL vs CSHD/CHKD (c_usdcoll*). */
+  const orPayMode = (orNo: string): "CSH" | "CHK" | "MIX" => {
+    const hasCash = (input.orCash ?? []).some(
+      (r) => r.orNo === orNo && (r.payType ?? "CSH").toUpperCase() !== "CHK",
+    );
+    const hasCheck =
+      (input.orCheck ?? []).some((r) => r.orNo === orNo) ||
+      (input.orCash ?? []).some((r) => r.orNo === orNo && (r.payType ?? "").toUpperCase() === "CHK");
+    if (hasCash && hasCheck) return "MIX";
+    if (hasCheck) return "CHK";
+    return "CSH";
+  };
+
   for (const row of input.orCash ?? []) {
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType);
+    const srcMap = collectionSrcMap(row.currency, "CSH");
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
+      srcMap,
+      origCy: row.currency,
+    });
     const err = pushMapped(
       out,
       rule,
@@ -693,7 +712,11 @@ export function processCollection(
   }
   for (const row of input.orCheck ?? []) {
     const payType = row.payType ?? "CHK";
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType);
+    const srcMap = collectionSrcMap(row.currency, "CHK");
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType, {
+      srcMap,
+      origCy: row.currency,
+    });
     const err = pushMapped(
       out,
       rule,
@@ -715,7 +738,21 @@ export function processCollection(
     added++;
   }
   for (const row of input.orItems ?? []) {
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType);
+    const cy = row.currency ?? "PHP";
+    const mode = orPayMode(row.orNo);
+    // PHP / mixed → COLL; USD cash-only → CSHD; USD check-only → CHKD
+    const srcMap =
+      cy.trim().toUpperCase() === "USD" && mode === "CHK"
+        ? "CHKD"
+        : cy.trim().toUpperCase() === "USD" && mode === "CSH"
+          ? "CSHD"
+          : "COLL";
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
+      srcMap,
+      origCy: cy,
+    });
+    // Legacy mapfocus forces paytype Q when check present else C
+    const forcedPay = mode === "CHK" ? "CHK" : mode === "CSH" ? row.payType : "CHK";
     const err = pushMapped(
       out,
       rule,
@@ -724,8 +761,8 @@ export function processCollection(
         refNo: row.orNo,
         refDate: row.orDate,
         itemNo: row.itemNo,
-        origCy: row.currency ?? "PHP",
-        payType: normalizePayType(row.payType),
+        origCy: cy,
+        payType: normalizePayType(forcedPay),
         unit: input.params.foUnit ?? "",
       },
       row.orItemAmt,
@@ -796,7 +833,10 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
     tranDate: input.proc.dateRec,
   };
   for (const row of input.disCash ?? []) {
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType);
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
+      srcMap: "DISB",
+      origCy: row.currency,
+    });
     const err = pushMapped(
       out,
       rule,
@@ -816,7 +856,12 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
   }
   for (const row of input.disCheck ?? []) {
     const payType = row.payType ?? "CHK";
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType);
+    // d_dismapcheck2: ACCTENT.BANKCODE = DISCHECKCURR.BANKCODE, SRCMAP=DISB
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, payType, {
+      srcMap: "DISB",
+      bankCode: row.bankCode,
+      origCy: row.currency,
+    });
     const err = pushMapped(
       out,
       rule,
@@ -837,7 +882,16 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
     added++;
   }
   for (const row of input.disItems ?? []) {
-    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType);
+    const hasCheck = (input.disCheck ?? []).some((c) => c.disNo === row.disNo);
+    const bankCode = hasCheck
+      ? (input.disCheck ?? []).find((c) => c.disNo === row.disNo)?.bankCode
+      : undefined;
+    const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
+      srcMap: "DISB",
+      // Item DR lines (d_dismapcheck) do not require bank; bank lines use check path
+      origCy: row.currency,
+      ...(bankCode && row.payType?.toUpperCase() === "CHK" ? { bankCode } : {}),
+    });
     const err = pushMapped(
       out,
       rule,
