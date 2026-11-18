@@ -956,6 +956,159 @@ const STAGE_ORDER =
   );
 }
 
+// USD collection — CSHD / CHKD SRCMAP cursors
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806USD",
+    userId: "DEMO",
+  });
+  const usdCheck: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [],
+    orCheck: [
+      {
+        orNo: "ORUSD001",
+        orDate: today,
+        currency: "USD",
+        checkAmt: 100,
+        payType: "CHK",
+        acctType: "ORCASH",
+        checkNo: "USCHK1",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORUSD001",
+        orDate: today,
+        itemNo: 1,
+        payType: "CHK",
+        orItemAmt: 100,
+        acctType: "ORPREM",
+        currency: "USD",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const checkResult = runFocusMapping(store, usdCheck);
+  check(checkResult.ok, `USD CHKD failed: ${checkResult.stages.map((s) => s.detail).join("; ")}`);
+  check(
+    checkResult.mapFocus.some((r) => r.refNo === "ORUSD001" && r.acctCode === "101102" && r.payType === "Q"),
+    "USD check tender → CHKD acct 101102",
+  );
+  check(
+    checkResult.mapFocus.some((r) => r.refNo === "ORUSD001" && r.acctCode === "401102"),
+    "USD check item → CHKD prem 401102",
+  );
+
+  const store2 = createStore();
+  store2.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806USD",
+    userId: "DEMO",
+  });
+  const usdCash: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORUSD002",
+        orDate: today,
+        currency: "USD",
+        cashAmt: 200,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orCheck: [],
+    orItems: [
+      {
+        orNo: "ORUSD002",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 200,
+        acctType: "ORPREM",
+        currency: "USD",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const cashResult = runFocusMapping(store2, usdCash);
+  check(cashResult.ok, `USD CSHD failed: ${cashResult.stages.map((s) => s.detail).join("; ")}`);
+  check(
+    cashResult.mapFocus.some((r) => r.refNo === "ORUSD002" && r.acctCode === "101101"),
+    "USD cash tender → CSHD acct 101101",
+  );
+  check(
+    cashResult.mapFocus.some((r) => r.refNo === "ORUSD002" && r.acctCode === "401101"),
+    "USD cash item → CSHD prem 401101",
+  );
+}
+
+// DIS check bank-code join (d_dismapcheck2)
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806BNK",
+    userId: "DEMO",
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [],
+    orItems: [],
+    disCash: [],
+    disCheck: [
+      {
+        disNo: "DSBDO001",
+        disDate: today,
+        currency: "PHP",
+        checkAmt: 750,
+        payType: "CHK",
+        acctType: "DISCASH",
+        checkNo: "BDO750",
+        bankCode: "BDO",
+      },
+    ],
+    disItems: [
+      {
+        disNo: "DSBDO001",
+        disDate: today,
+        itemNo: 1,
+        disAmt: 750,
+        acctType: "DISPREM",
+      },
+    ],
+  };
+  const result = runFocusMapping(store, input);
+  check(result.ok, `DIS bank join failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(
+    result.mapFocus.some((r) => r.refNo === "DSBDO001" && r.acctCode === "102900" && r.controlNo === "BDO750"),
+    "DIS check with BDO → bank acct 102900",
+  );
+  check(
+    !result.mapFocus.some((r) => r.refNo === "DSBDO001" && r.acctCode === "101001" && r.drCr === "CR"),
+    "bank match preferred over plain DISCASH",
+  );
+}
+
 // CDR happy path
 {
   const store = createStore();

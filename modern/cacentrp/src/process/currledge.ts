@@ -44,6 +44,23 @@ export interface AcctEntRule {
   lspAccType?: string;
   lspOrType?: string;
   payType?: string; // optional filter; empty = any
+  /**
+   * ACCTENT.SRCMAP — COLL / CSHD / CHKD (collection), DISB (disbursement), etc.
+   * Empty = any (backward compatible).
+   */
+  srcMap?: string;
+  /** ACCTENT.BANKCODE — required match for DIS check bank lines (d_dismapcheck2). */
+  bankCode?: string;
+}
+
+/** Optional filters for USD COLL cursors / DIS check bank joins. */
+export interface MatchAcctEntOpts {
+  /** Prefer ACCTENT.SRCMAP (COLL / CSHD / CHKD / DISB). */
+  srcMap?: string;
+  /** Prefer ACCTENT.BANKCODE = DISCHECKCURR.BANKCODE. */
+  bankCode?: string;
+  /** Prefer ACCTENT.ORIGCY when set on the rule. */
+  origCy?: string;
 }
 
 export interface ProcCdrVar {
@@ -168,15 +185,62 @@ export function matchAcctEnt(
   coCode: string,
   tranType: string,
   payType?: string,
+  opts?: MatchAcctEntOpts,
 ): AcctEntRule | undefined {
   const pay = (payType ?? "").trim().toUpperCase();
-  return rules.find((r) => {
+  const wantSrc = (opts?.srcMap ?? "").trim().toUpperCase();
+  const wantBank = (opts?.bankCode ?? "").trim().toUpperCase();
+  const wantCy = (opts?.origCy ?? "").trim().toUpperCase();
+
+  const base = rules.filter((r) => {
     if (r.coCode.trim() !== coCode.trim()) return false;
     if (r.tranType.trim() !== tranType.trim()) return false;
     const rp = (r.payType ?? "").trim();
-    if (!rp) return true;
-    return rp.toUpperCase() === pay;
+    if (rp && rp.toUpperCase() !== pay) return false;
+    if (wantCy) {
+      const rc = (r.origCy ?? "").trim().toUpperCase();
+      if (rc && rc !== wantCy) return false;
+    }
+    return true;
   });
+  if (base.length === 0) return undefined;
+
+  const score = (r: AcctEntRule): number => {
+    let s = 0;
+    const rs = (r.srcMap ?? "").trim().toUpperCase();
+    const rb = (r.bankCode ?? "").trim().toUpperCase();
+    if (wantSrc) {
+      if (rs === wantSrc) s += 4;
+      else if (!rs) s += 1; // unscoped rule still usable
+      else return -1;
+    }
+    if (wantBank) {
+      if (rb === wantBank) s += 4;
+      else if (!rb) s += 0;
+      else return -1;
+    }
+    return s;
+  };
+
+  let best: AcctEntRule | undefined;
+  let bestScore = -1;
+  for (const r of base) {
+    const sc = score(r);
+    if (sc > bestScore) {
+      bestScore = sc;
+      best = r;
+    }
+  }
+  return bestScore < 0 ? undefined : best;
+}
+
+/**
+ * Legacy collection SRCMAP: PHP → COLL; USD cash → CSHD; USD check → CHKD.
+ */
+export function collectionSrcMap(currency: string | undefined, payMode: "CSH" | "CHK"): string {
+  const cy = (currency ?? "PHP").trim().toUpperCase();
+  if (cy === "USD") return payMode === "CHK" ? "CHKD" : "CSHD";
+  return "COLL";
 }
 
 export function debitCreditTotals(rows: CurrLedgeRow[]): { debit: number; credit: number } {
