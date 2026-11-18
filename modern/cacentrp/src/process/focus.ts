@@ -43,6 +43,13 @@ export interface OrCheckRow {
   payType?: string;
   checkItemNo?: number;
   checkNo?: string;
+  checkDate?: string;
+  /** ORCHECKCURR.CHECKCLRTY */
+  checkClrTy?: string;
+  checkType?: string;
+  checkTypeD?: string;
+  bankBranch?: string;
+  dsSeqNo?: string;
 }
 
 export interface OrItemRow {
@@ -91,7 +98,11 @@ export interface DisCheckRow {
   payType?: string;
   checkItemNo?: number;
   checkNo?: string;
+  checkDate?: string;
+  /** DISCHECKCURR.BANKCODE — joins ACCTENT.BANKCODE on d_dismapcheck2. */
   bankCode?: string;
+  bankBranch?: string;
+  payee?: string;
 }
 
 export interface DisItemRow {
@@ -206,6 +217,12 @@ export interface FocusInput {
    * |paid − items| ≤ param 105 before mapping (legacy collection gate).
    */
   validateOrPayments?: boolean;
+  /**
+   * Within-tol short/over handling (legacy after param-105 gate):
+   * - `adjust` (default) — add exeShort to lowest itemNo (ALAI when no LSP COLL hit)
+   * - `insert` — new OR item with param 103/104 PAYTYPE (ALAI when LSP COLL items exist)
+   */
+  orShortOverMode?: "adjust" | "insert";
   /** SYRPDRPARM.TRANTYPE list for the company — gates PDR mapping. */
   pdrTranTypes?: string[];
   pdrItems?: PdrItemRow[];
@@ -520,6 +537,115 @@ export function validateOrCashCheckPayments(
   return null;
 }
 
+/**
+ * Port of ALAI within-tol short/over: adjust first item or insert param 103/104
+ * line, and write ORSHORTOVER. Mutates `input.orItems` / store.orItemDtlCurr.
+ */
+export function applyOrShortOver(store: DailyStore, input: FocusInput): string | null {
+  if (input.validateOrPayments === false) return null;
+  if (input.params.orExcessShortTol == null) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const mode = input.orShortOverMode ?? "adjust";
+  const items = input.orItems ?? [];
+
+  const orNos = new Set<string>();
+  for (const r of items) orNos.add(r.orNo);
+  for (const r of input.orCash ?? []) orNos.add(r.orNo);
+  for (const r of input.orCheck ?? []) orNos.add(r.orNo);
+
+  for (const orNo of orNos) {
+    const orItems = items.filter((r) => r.orNo === orNo);
+    if (orItems.length === 0) continue;
+
+    const { cash, check } = orPaymentTotals(input, orNo);
+    const itemTotal = round2(orItems.reduce((s, r) => s + r.orItemAmt, 0));
+    const exeShort = round2(cash + check - itemTotal);
+    if (exeShort === 0) continue;
+
+    if (mode === "insert") {
+      const payType =
+        exeShort > 0 ? input.params.orExcessPayType : input.params.orShortPayType;
+      if (!payType?.trim()) {
+        return `PARAMTYPE ${exeShort > 0 ? "103" : "104"} not found for OR short/over insert`;
+      }
+      const maxItem = Math.max(...orItems.map((r) => r.itemNo), 0);
+      const newItemNo = maxItem + 1;
+      const sample = orItems[0]!;
+      const newRow: OrItemRow = {
+        orNo,
+        orDate: sample.orDate,
+        itemNo: newItemNo,
+        payType: payType.trim(),
+        orItemAmt: exeShort,
+        acctType: payType.trim(),
+        currency: sample.currency,
+      };
+      items.push(newRow);
+      input.orItems = items;
+      store.orItemDtlCurr.push({
+        company: input.proc.compCode,
+        foCode: input.proc.foCode,
+        orNo,
+        orDate: sample.orDate,
+        grpItemNo: 1,
+        itemNo: newItemNo,
+        payType: payType.trim(),
+        orItemAmt: exeShort,
+        dueDate: "",
+        ssiYrMm: "",
+        remarks: exeShort > 0 ? "Excess Amount Received" : "Short Amount Received",
+        postTag: "",
+        orItemDtlT: "",
+        processDate: today,
+      });
+      store.orShortOver.push({
+        coCode: input.proc.compCode,
+        foCode: input.proc.foCode,
+        orNo,
+        itemNo: newItemNo,
+        statAg: "H",
+        newAmt: exeShort,
+        oldAmt: 0,
+        processDate: today,
+        userId: input.userId,
+      });
+      continue;
+    }
+
+    // adjust — lowest itemNo (legacy min ITEMNO / item 1 path)
+    const target = [...orItems].sort((a, b) => a.itemNo - b.itemNo)[0]!;
+    const oldAmt = target.orItemAmt;
+    const newAmt = round2(oldAmt + exeShort);
+    target.orItemAmt = newAmt;
+
+    for (const dtl of store.orItemDtlCurr) {
+      if (
+        dtl.orNo === orNo &&
+        dtl.itemNo === target.itemNo &&
+        dtl.company === input.proc.compCode &&
+        dtl.foCode === input.proc.foCode
+      ) {
+        dtl.orItemAmt = newAmt;
+      }
+    }
+
+    store.orShortOver.push({
+      coCode: input.proc.compCode,
+      foCode: input.proc.foCode,
+      orNo,
+      itemNo: target.itemNo,
+      statAg: "H",
+      newAmt,
+      oldAmt,
+      processDate: today,
+      userId: input.userId,
+    });
+  }
+
+  return null;
+}
+
 export function processCollection(
   store: DailyStore,
   input: FocusInput,
@@ -527,6 +653,17 @@ export function processCollection(
 ): FocusStageResult {
   const gate = validateOrCashCheckPayments(store, input);
   if (gate) return gate;
+
+  const shortOverErr = applyOrShortOver(store, input);
+  if (shortOverErr) {
+    return {
+      stage: "collection",
+      ok: false,
+      detail: shortOverErr,
+      rowsAdded: 0,
+      rejectStatus: "K",
+    };
+  }
 
   let added = 0;
   const ctx = {

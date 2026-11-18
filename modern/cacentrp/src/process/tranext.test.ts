@@ -131,10 +131,53 @@ check(store.disCashCurr[0]!.cashAmt === 1000, "VF");
 const focusSets = focusWorkingFromStore(store);
 check(focusSets.orItems!.length === 1, "focus orItems from RC");
 check(focusSets.orCheck!.length === 1 && focusSets.orCheck![0]!.checkAmt === 444000, "focus orCheck from RE");
+check(!!focusSets.orCheck![0]!.checkClrTy || focusSets.orCheck![0]!.checkNo !== undefined, "orCheck richer fields");
 check(focusSets.orCash!.every((r) => r.payType === "CSH"), "focus orCash cash-only");
 check(focusSets.disItems!.length === 1, "focus disItems from VC");
 check(focusSets.disCash!.length === 1, "focus disCash from VF");
 check(focusSets.deposits!.length === 1, "focus deposits from DA");
+
+// Cancelled ORMAINCURR (ORSTATCODE=C) excluded from FOCUS working sets
+{
+  const cancelled = createStore();
+  cancelled.orMainCurr.push({
+    company: "ALAI",
+    orNo: "ORCXL",
+    orDate: "2026-01-01",
+    foCode: "106",
+    orStatCode: "C",
+    orStatDate: "2026-01-01",
+    processTyp: "",
+    recvName: "",
+    recvAddr1: "",
+    recvAddr2: "",
+    recvAddr3: "",
+    userId: "DEMO",
+    dateStamp: "",
+    varPol: "",
+    processDate: "2026-01-01",
+    userIdCac: "DEMO",
+  });
+  cancelled.orCheckCurr.push({
+    company: "ALAI",
+    foCode: "106",
+    orNo: "ORCXL",
+    orDate: "2026-01-01",
+    checkItemNo: 1,
+    checkNo: "X1",
+    checkDate: "2026-01-01",
+    currency: "PHP",
+    checkAmt: 99,
+    checkClrTy: "L",
+    dsSeqNo: "",
+    checkType: "M",
+    checkTypeD: "",
+    bankBranch: "BR1",
+    processDate: "2026-01-01",
+  });
+  const sets = focusWorkingFromStore(cancelled);
+  check((sets.orCheck ?? []).length === 0, "cancelled OR check excluded");
+}
 
 const pack = runTranextLoad(createStore(), {
   dir: FIXTURES,

@@ -64,6 +64,14 @@ export interface CacParams {
    * When |cash+check − item total| exceeds this, collection rejects with BDO `K`.
    */
   orExcessShortTol?: number;
+  /**
+   * PARAMTYPE 103 — PAYTYPE for excess-amount ORITEMDTL line (ALAI insert path).
+   */
+  orExcessPayType?: string;
+  /**
+   * PARAMTYPE 104 — PAYTYPE for short-amount ORITEMDTL line (ALAI insert path).
+   */
+  orShortPayType?: string;
   /** PARAMTYPE 106 — realized gain/loss */
   realizedGainLossAcct?: string;
   foUnit?: string;

@@ -1201,32 +1201,53 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
   FocusInput,
   "orCash" | "orCheck" | "orItems" | "disCash" | "disCheck" | "disItems" | "deposits"
 > {
-  const orCash: OrCashRow[] = store.orCashCurr.map((r) => ({
-    orNo: r.orNo,
-    orDate: r.orDate,
-    currency: r.currency || "PHP",
-    cashAmt: r.cashAmt,
-    payType: "CSH",
-    acctType: "ORCASH",
-  }));
-  const orCheck = store.orCheckCurr.map((r) => ({
-    orNo: r.orNo,
-    orDate: r.orDate,
-    currency: r.currency || "PHP",
-    checkAmt: r.checkAmt,
-    payType: "CHK" as const,
-    acctType: "ORCASH",
-    checkItemNo: r.checkItemNo,
-    checkNo: r.checkNo,
-  }));
-  const orItems: OrItemRow[] = store.orItemDtlCurr.map((r) => ({
-    orNo: r.orNo,
-    orDate: r.orDate,
-    itemNo: r.itemNo,
-    payType: r.payType,
-    orItemAmt: r.orItemAmt,
-    acctType: r.payType || "ORPREM",
-  }));
+  // dw_maporcheckcurr / cash / items join ORMAINCURR with ORSTATCODE <> 'C'
+  const cancelled = new Set(
+    store.orMainCurr
+      .filter((r) => (r.orStatCode ?? "").trim().toUpperCase() === "C")
+      .map((r) => `${r.company}|${r.foCode}|${r.orNo}|${r.orDate}`),
+  );
+  const orActive = (company: string, foCode: string, orNo: string, orDate: string) =>
+    !cancelled.has(`${company}|${foCode}|${orNo}|${orDate}`);
+
+  const orCash: OrCashRow[] = store.orCashCurr
+    .filter((r) => orActive(r.company, r.foCode, r.orNo, r.orDate))
+    .map((r) => ({
+      orNo: r.orNo,
+      orDate: r.orDate,
+      currency: r.currency || "PHP",
+      cashAmt: r.cashAmt,
+      payType: "CSH",
+      acctType: "ORCASH",
+    }));
+  const orCheck = store.orCheckCurr
+    .filter((r) => orActive(r.company, r.foCode, r.orNo, r.orDate))
+    .map((r) => ({
+      orNo: r.orNo,
+      orDate: r.orDate,
+      currency: r.currency || "PHP",
+      checkAmt: r.checkAmt,
+      payType: "CHK" as const,
+      acctType: "ORCASH",
+      checkItemNo: r.checkItemNo,
+      checkNo: r.checkNo,
+      checkDate: r.checkDate,
+      checkClrTy: r.checkClrTy,
+      checkType: r.checkType,
+      checkTypeD: r.checkTypeD,
+      bankBranch: r.bankBranch,
+      dsSeqNo: r.dsSeqNo,
+    }));
+  const orItems: OrItemRow[] = store.orItemDtlCurr
+    .filter((r) => orActive(r.company, r.foCode, r.orNo, r.orDate))
+    .map((r) => ({
+      orNo: r.orNo,
+      orDate: r.orDate,
+      itemNo: r.itemNo,
+      payType: r.payType,
+      orItemAmt: r.orItemAmt,
+      acctType: r.payType || "ORPREM",
+    }));
   const disCash: DisCashRow[] = store.disCashCurr.map((r) => ({
     disNo: r.disNo,
     disDate: r.disDate,
@@ -1244,7 +1265,10 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
     acctType: "DISCASH",
     checkItemNo: r.checkItemNo,
     checkNo: r.checkNo,
+    checkDate: r.checkDate,
     bankCode: r.bankCode,
+    bankBranch: r.bankBranch,
+    payee: r.payee,
   }));
   const disItems: DisItemRow[] = store.disItemDtlCurr.map((r) => ({
     disNo: r.disNo,
