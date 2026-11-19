@@ -40,8 +40,12 @@ See [`docs/tranext.md`](tranext.md).
 |-------|----------|
 | BDOXPMST | `store.bdoXpMst` — resolve sender email → `sntComp`/`sntBdo` (strict when table non-empty) |
 | No-attach | Status `C` / `*`; letter-month `subFile` (`yy`+A–L+`dd`+bdo) |
-| `wf_sendmail` | `runSendmail` — distinct today's BDOAPMST → HTML feedback (optional `outDir`) → recipient from XP; **send iff XT7=Y** (log-only transport) |
+| `wf_sendmail` | `runSendmail` — feedback HTML + **ERR.HTM** from `bdoError`/`bdoErrRef`; **send iff XT7=Y** (log-only) |
+| DELFLECF | `cleanupTempDir` → delete `*.FC?` / `*.CDR` (`delflecf.ts`) |
+| ARJ | `arjArchives` + `tranextDir` → FOCUSXTR/APCDRXTR plan (real extract when `arj` on PATH) |
 
-## Still pending
+## Still pending / out of band
 
-MAPI attach-to-disk, DELFLECF, ARJ extract bats (`FOCUSXTR` / `APCDRXTR`), full `BDOAPDTL` error HTML grid.
+- Live MAPI attach-save (caller supplies `pathname`; no Outlook session in Node)
+- Misc. Files `HOTCI.EXE` (pipeline `external`)
+- SYRADJPARM adj loop (empty in extracted PB — no-op)

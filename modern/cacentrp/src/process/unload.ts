@@ -2,11 +2,13 @@
  * Port of w_unload daily unload orchestration (ue_process / wf_procmail / wf_procmiscfiles).
  *
  * Control flow:
+ *   0. DELFLECF — delete old *.FC?/*.CDR in cleanupTempDir
  *   1. MISCRENM — rename inbound *.TRN → *.DBF (optional inboundDir)
  *   2. Mail subjects CAC-LSP File / NO CAC-LSP File → FOCUS/CDR (BDOXPMST resolve)
- *   3. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI); ImportFile when rows omitted
- *   4. Optional mapDownstream → call ported FOCUS/CDR/BPY/GRP mappers
- *   5. wf_sendmail — feedback HTML + XT7 gate (log-only transport)
+ *   3. Optional ARJ extract (FOCUSXTR/APCDRXTR) into tranextDir
+ *   4. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI); ImportFile when rows omitted
+ *   5. Optional mapDownstream → call ported FOCUS/CDR/BPY/GRP mappers
+ *   6. wf_sendmail — feedback + ERR.HTM + XT7 gate (log-only transport)
  *
  * TRANEXT: optional tranextDir → ImportFile + wf_write2* (typed CS/DA/RA/FO_TCDBF).
  */
@@ -18,6 +20,8 @@ import { readDbfFile } from "./dbf.js";
 import { DEMO_ACCTENT, DEMO_PARAMS, demoCdrInput, demoFocusInput } from "./fixtures.js";
 import { runFocusMapping, type FocusInput } from "./focus.js";
 import { runGrpMapping } from "./grp.js";
+import { runArjExtract, type ArjExtractKind } from "./arjextract.js";
+import { deleteOldFocusCdrFiles } from "./delflecf.js";
 import { renameTrnToDbf } from "./miscrenm.js";
 import {
   feedbackFormName,
@@ -91,6 +95,13 @@ export interface UnloadInput {
   sendFeedback?: boolean;
   /** Overrides for R01 subject / XT7 / HTML out dir */
   sendmail?: Omit<SendmailInput, "processDate">;
+  /** Legacy WINDOWS\TEMP — DELFLECF *.FC? / *.CDR cleanup */
+  cleanupTempDir?: string;
+  /**
+   * ARJ archives to extract into `tranextDir` (FOCUSXTR / APCDRXTR).
+   * Plans only when `arj` is unavailable.
+   */
+  arjArchives?: Array<{ path: string; kind?: ArjExtractKind }>;
 }
 
 export interface UnloadStepLog {
@@ -272,12 +283,37 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   const tranextPlan = new Set<TranextCode>();
   let foControlOk: boolean | undefined;
 
+  if (input.cleanupTempDir) {
+    const clean = deleteOldFocusCdrFiles(input.cleanupTempDir);
+    logs.push({ step: "delflecf", detail: clean.detail, ok: clean.ok });
+  }
+
   const misc = renameTrnToDbf(input.inboundDir ?? "");
   logs.push({
     step: "miscrenm",
     detail: misc.detail,
     ok: misc.ok,
   });
+
+  if (input.arjArchives?.length && input.tranextDir) {
+    for (const arch of input.arjArchives) {
+      const kind: ArjExtractKind =
+        arch.kind ??
+        (arch.path.toUpperCase().includes("CDR") ? "APCDRXTR" : "FOCUSXTR");
+      const ex = runArjExtract({
+        tranextDir: input.tranextDir,
+        archivePath: arch.path,
+        kind,
+      });
+      logs.push({ step: "arj-extract", detail: ex.detail, ok: ex.ok });
+    }
+  } else if (input.arjArchives?.length && !input.tranextDir) {
+    logs.push({
+      step: "arj-extract",
+      detail: "ARJ archives supplied but tranextDir missing; skip",
+      ok: false,
+    });
+  }
 
   const scanned = input.inboundDir ? scanInboundDir(input.inboundDir) : [];
   const inboundFiles = mergeInbound(input.inbound ?? [], scanned);
@@ -533,6 +569,7 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
               disCash: fromTx.disCash,
               disCheck: fromTx.disCheck,
               disItems: fromTx.disItems,
+              disAddDedLines: fromTx.disAddDedLines,
               deposits: fromTx.deposits,
             }
           : {}),

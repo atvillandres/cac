@@ -6,7 +6,13 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { BdoApMstRow, BdoXpMstRow, DailyStore } from "./store.js";
+import type {
+  BdoApMstRow,
+  BdoErrorRow,
+  BdoErrRefRow,
+  BdoXpMstRow,
+  DailyStore,
+} from "./store.js";
 
 export interface SendmailInput {
   processDate: string; // YYYY-MM-DD
@@ -28,7 +34,10 @@ export interface SendmailPlan {
   subject: string;
   formFile: string;
   htmlPath?: string;
+  /** Optional …ERR.HTM from BDOERROR / BDOERRREF */
+  errorHtmlPath?: string;
   statusLines: string[];
+  errorLines: string[];
   /** True only when XT7=Y and recipient resolved */
   sent: boolean;
   detail: string;
@@ -130,6 +139,36 @@ ${lines}
 `;
 }
 
+function lookupErrRef(
+  refs: BdoErrRefRow[],
+  errCode: string,
+): BdoErrRefRow | undefined {
+  return refs.find((r) => r.errCode.trim().toUpperCase() === errCode.trim().toUpperCase());
+}
+
+function buildErrorHtml(
+  errors: BdoErrorRow[],
+  refs: BdoErrRefRow[],
+  plan: Pick<SendmailPlan, "company" | "bdoCode" | "source" | "subject">,
+): string {
+  const lines = errors
+    .map((e) => {
+      const ref = lookupErrRef(refs, e.errCode);
+      return `<tr><td>${escapeHtml(e.xFiles ?? "")}</td><td>${escapeHtml(e.docType ?? "")}</td><td>${escapeHtml(e.docNum ?? "")}</td><td>${escapeHtml(e.errCode)}</td><td>${escapeHtml(ref?.errProc ?? "")}</td><td>${escapeHtml(ref?.errDesc ?? "")}</td></tr>`;
+    })
+    .join("\n");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(plan.subject)} — Errors</title></head>
+<body>
+<h1>${escapeHtml(plan.subject)} — Errors</h1>
+<p>${escapeHtml(plan.company)} / ${escapeHtml(plan.bdoCode)} / srce=${escapeHtml(plan.source)}</p>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>File</th><th>DocType</th><th>DocNum</th><th>Code</th><th>Proc</th><th>Description</th></tr>
+${lines}
+</table>
+</body></html>
+`;
+}
+
 /**
  * Plan (and optionally write) FO feedback mail for today's BDOAPMST submissions.
  * Transport is log-only: `sent=true` means XT7 gate passed (legacy would mailSend).
@@ -175,6 +214,7 @@ export function runSendmail(store: DailyStore, input: SendmailInput): SendmailRe
         subject,
         formFile,
         statusLines: [],
+        errorLines: [],
         sent: false,
         detail: `No Data for Email Feedback - ${trio.company} ${trio.bdoCode}`,
       });
@@ -193,7 +233,20 @@ export function runSendmail(store: DailyStore, input: SendmailInput): SendmailRe
       return `${r.subFile || "(none)"} status=${r.status} (${desc})`;
     });
 
+    const errorRows = store.bdoError.filter(
+      (e) =>
+        e.company === trio.company &&
+        e.bdoCode === trio.bdoCode &&
+        e.source === trio.source &&
+        e.processDate === input.processDate,
+    );
+    const errorLines = errorRows.map((e) => {
+      const ref = lookupErrRef(store.bdoErrRef, e.errCode);
+      return `${e.errCode} ${e.docNum ?? ""} ${ref?.errDesc ?? ""}`.trim();
+    });
+
     let htmlPath: string | undefined;
+    let errorHtmlPath: string | undefined;
     if (input.outDir && recipient) {
       htmlPath = join(input.outDir, `${formFile}${trio.bdoCode}.HTM`);
       writeFileSync(
@@ -201,6 +254,14 @@ export function runSendmail(store: DailyStore, input: SendmailInput): SendmailRe
         buildFeedbackHtml(feedbackRows, { ...trio, subject }, statusLetters),
         "utf8",
       );
+      if (errorRows.length > 0) {
+        errorHtmlPath = join(input.outDir, `${formFile}${trio.bdoCode}ERR.HTM`);
+        writeFileSync(
+          errorHtmlPath,
+          buildErrorHtml(errorRows, store.bdoErrRef, { ...trio, subject }),
+          "utf8",
+        );
+      }
     }
 
     const xt7On = (xt7[trio.company] ?? xt7[trio.company.toUpperCase()] ?? "")
@@ -214,7 +275,10 @@ export function runSendmail(store: DailyStore, input: SendmailInput): SendmailRe
       detail = `XT7≠Y; feedback planned for ${recipient}` + (htmlPath ? ` (${htmlPath})` : "");
     } else {
       sent = true;
-      detail = `Would mailSend → ${recipient}` + (htmlPath ? ` attach=${htmlPath}` : "");
+      detail =
+        `Would mailSend → ${recipient}` +
+        (htmlPath ? ` attach=${htmlPath}` : "") +
+        (errorHtmlPath ? ` err=${errorHtmlPath}` : "");
     }
 
     plans.push({
@@ -223,7 +287,9 @@ export function runSendmail(store: DailyStore, input: SendmailInput): SendmailRe
       subject,
       formFile,
       htmlPath,
+      errorHtmlPath,
       statusLines,
+      errorLines,
       sent,
       detail,
     });

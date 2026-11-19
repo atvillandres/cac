@@ -17,6 +17,8 @@ import {
   write2Re,
   write2Va,
   write2Vc,
+  write2Vd,
+  write2Ve,
   write2Vf,
 } from "./tranext.js";
 
@@ -136,6 +138,52 @@ check(focusSets.orCash!.every((r) => r.payType === "CSH"), "focus orCash cash-on
 check(focusSets.disItems!.length === 1, "focus disItems from VC");
 check(focusSets.disCash!.length === 1, "focus disCash from VF");
 check(focusSets.deposits!.length === 1, "focus deposits from DA");
+
+// VD/VE → disAddDedLines
+write2Vd(
+  store,
+  [
+    {
+      FOCODE: "106",
+      DISFORM: "D",
+      DISNO: "DS000001",
+      DISDATE: "2006-08-04",
+      GRPITEMNO: 1,
+      ITEMNO: 1,
+      DISTYPE: "CSH",
+      ADDCODE: "401400",
+      DISADDAMT: 25,
+    },
+  ],
+  ctx,
+);
+write2Ve(
+  store,
+  [
+    {
+      FOCODE: "106",
+      DISFORM: "D",
+      DISNO: "DS000001",
+      DISDATE: "2006-08-04",
+      GRPITEMNO: 1,
+      ITEMNO: 2,
+      DISTYPE: "CSH",
+      DEDCODE: "501400",
+      DISDEDAMT: 25,
+    },
+  ],
+  ctx,
+);
+const withAddDed = focusWorkingFromStore(store);
+check((withAddDed.disAddDedLines ?? []).length === 2, "VD/VE → disAddDedLines");
+check(
+  withAddDed.disAddDedLines!.some((l) => l.kind === "ADD" && l.acctCode === "401400" && l.drCr === "CR"),
+  "ADD CR from VD",
+);
+check(
+  withAddDed.disAddDedLines!.some((l) => l.kind === "DED" && l.acctCode === "501400" && l.drCr === "DR"),
+  "DED DR from VE",
+);
 
 // Cancelled ORMAINCURR (ORSTATCODE=C) excluded from FOCUS working sets
 {
