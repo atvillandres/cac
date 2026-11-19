@@ -1238,16 +1238,28 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
       bankBranch: r.bankBranch,
       dsSeqNo: r.dsSeqNo,
     }));
+  const orAgtByKey = new Map<string, string>();
+  const orCyByKey = new Map<string, string>();
+  for (const r of store.orItemCurr) {
+    const k = `${r.company}|${r.foCode}|${r.orNo}|${r.orDate}`;
+    if (r.agtNo) orAgtByKey.set(k, r.agtNo);
+    if (r.currency) orCyByKey.set(k, r.currency);
+  }
   const orItems: OrItemRow[] = store.orItemDtlCurr
     .filter((r) => orActive(r.company, r.foCode, r.orNo, r.orDate))
-    .map((r) => ({
-      orNo: r.orNo,
-      orDate: r.orDate,
-      itemNo: r.itemNo,
-      payType: r.payType,
-      orItemAmt: r.orItemAmt,
-      acctType: r.payType || "ORPREM",
-    }));
+    .map((r) => {
+      const k = `${r.company}|${r.foCode}|${r.orNo}|${r.orDate}`;
+      return {
+        orNo: r.orNo,
+        orDate: r.orDate,
+        itemNo: r.itemNo,
+        payType: r.payType,
+        orItemAmt: r.orItemAmt,
+        acctType: r.payType || "ORPREM",
+        currency: orCyByKey.get(k),
+        agtNo: orAgtByKey.get(k),
+      };
+    });
   const disCash: DisCashRow[] = store.disCashCurr.map((r) => ({
     disNo: r.disNo,
     disDate: r.disDate,
@@ -1270,14 +1282,26 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
     bankBranch: r.bankBranch,
     payee: r.payee,
   }));
-  const disItems: DisItemRow[] = store.disItemDtlCurr.map((r) => ({
-    disNo: r.disNo,
-    disDate: r.disDate,
-    itemNo: r.itemNo,
-    disAmt: r.disAmt,
-    payType: r.disType,
-    acctType: r.disType || "DISPREM",
-  }));
+  const disAgtByKey = new Map<string, string>();
+  const disUnitByKey = new Map<string, string>();
+  for (const r of store.disItemCurr) {
+    const k = `${r.company}|${r.foCode}|${r.disNo}|${r.disDate}`;
+    if (r.agtNo) disAgtByKey.set(k, r.agtNo);
+    if (r.unitCode) disUnitByKey.set(k, r.unitCode);
+  }
+  const disItems: DisItemRow[] = store.disItemDtlCurr.map((r) => {
+    const k = `${r.company}|${r.foCode}|${r.disNo}|${r.disDate}`;
+    return {
+      disNo: r.disNo,
+      disDate: r.disDate,
+      itemNo: r.itemNo,
+      disAmt: r.disAmt,
+      payType: r.disType,
+      acctType: r.disType || "DISPREM",
+      agtNo: disAgtByKey.get(k),
+      unitCode: r.unitCode || disUnitByKey.get(k),
+    };
+  });
   const deposits: DepositRow[] = store.depositSlip.map((r) => ({
     dsSeqNo: r.dsSeqNo,
     dateDep: r.dateDep,
