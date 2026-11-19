@@ -47,6 +47,22 @@ import { join } from "node:path";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(HERE, "..");
 
+/** Split --inbound args into file paths vs directory (legacy C:\\tci\\inbound). */
+function splitInboundArgs(paths: string[]): { inboundPaths: string[]; inboundDir?: string } {
+  const inboundPaths: string[] = [];
+  let inboundDir: string | undefined;
+  for (const p of paths) {
+    try {
+      const st = statSync(p);
+      if (st.isDirectory()) inboundDir = p;
+      else inboundPaths.push(p);
+    } catch {
+      inboundPaths.push(p);
+    }
+  }
+  return { inboundPaths, inboundDir };
+}
+
 function usage(): never {
   console.log(`Usage:
   cacentrp [options]
@@ -64,7 +80,7 @@ Login options:
 Daily options:
   --user <id>             Operator user id (default: DEMO)
   --seed-ledger           Seed demo CURRLEDGE rows before run/endofday
-  --inbound <path>        Inbound BPY/GRP DBF or BRS .ALI file/dir (repeatable)
+  --inbound <path>        Inbound BPY/GRP DBF file, or dir (MISCRENM *.TRN→*.DBF + scan); BRS .ALI file/dir (repeatable)
   --message-subject <s>   Synthetic mail subject (with --message-file)
   --message-file <path>   Synthetic mail attachment path
   --map                  Invoke FOCUS/CDR/BPY/GRP after unload (default)
@@ -254,14 +270,18 @@ function runDailyCommand(argv: string[]) {
   }
 
   if (opts.cmd === "run") {
+    const { inboundPaths, inboundDir } = splitInboundArgs(opts.inbound);
     const result = runDailyPipeline({
       userId: opts.userId,
       seedLedger: opts.seedLedger,
       messages,
       inboundPaths:
-        opts.inbound.length > 0
-          ? opts.inbound
-          : ["C:\\tci\\inbound\\0806BPY.DBF", "C:\\tci\\inbound\\0806GRP.DBF"],
+        inboundPaths.length > 0
+          ? inboundPaths
+          : inboundDir
+            ? []
+            : ["C:\\tci\\inbound\\0806BPY.DBF", "C:\\tci\\inbound\\0806GRP.DBF"],
+      inboundDir,
       mapDownstream: opts.mapDownstream,
       tranextDir: opts.tranextDir,
       endOfDay: {
@@ -294,17 +314,21 @@ function runDailyCommand(argv: string[]) {
 
   if (opts.cmd === "unload") {
     const store = createStore();
+    const { inboundPaths, inboundDir } = splitInboundArgs(opts.inbound);
     const inbound =
-      opts.inbound.length > 0
-        ? opts.inbound.map((path) => ({ path, kind: detectInboundKind(path) }))
-        : [
-            { path: "C:\\tci\\inbound\\0806BPY.DBF", kind: detectInboundKind("0806BPY.DBF") },
-            { path: "C:\\tci\\inbound\\0806GRP.DBF", kind: detectInboundKind("0806GRP.DBF") },
-          ];
+      inboundPaths.length > 0
+        ? inboundPaths.map((path) => ({ path, kind: detectInboundKind(path) }))
+        : inboundDir
+          ? []
+          : [
+              { path: "C:\\tci\\inbound\\0806BPY.DBF", kind: detectInboundKind("0806BPY.DBF") },
+              { path: "C:\\tci\\inbound\\0806GRP.DBF", kind: detectInboundKind("0806GRP.DBF") },
+            ];
     const unload = runUnload(store, {
       userId: opts.userId,
       messages,
       inbound,
+      inboundDir,
       mapDownstream: opts.mapDownstream,
       tranextDir: opts.tranextDir,
     });

@@ -34,7 +34,7 @@ export const DAILY_STAGES: PipelineStage[] = [
     title: "Auto Email Detach",
     window: "w_unload",
     status: "ported",
-    notes: "Mail+inbound orchestrator; mapDownstream → FOCUS/CDR/BPY/GRP; optional TRANEXT dir → wf_write2*",
+    notes: "MISCRENM+mail+inbound DBF ImportFile; mapDownstream → FOCUS/CDR/BPY/GRP; optional TRANEXT → wf_write2*",
   },
   {
     id: "tranext-load",
@@ -140,6 +140,8 @@ export interface DailyRunOptions {
   seedLedger?: boolean;
   messages?: MailMessage[];
   inboundPaths?: string[];
+  /** Legacy C:\tci\inbound — MISCRENM + scan *.DBF */
+  inboundDir?: string;
   mapDownstream?: boolean;
   tranextDir?: string;
   endOfDay?: Partial<EndOfDayOptions>;
@@ -162,6 +164,7 @@ export function runDailyPipeline(opts: DailyRunOptions): DailyRunResult {
       path,
       kind: detectInboundKind(path),
     })),
+    inboundDir: opts.inboundDir,
     mapDownstream: opts.mapDownstream ?? true,
     tranextDir: opts.tranextDir,
   };

@@ -1,13 +1,17 @@
 /**
  *   npx tsx src/process/unload.test.ts
  */
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { demoBpyRows } from "./bpy.js";
+import { writeDbfFile } from "./dbf.js";
 import { demoGrpRows } from "./grp.js";
+import { renameTrnToDbf } from "./miscrenm.js";
 import { createStore } from "./store.js";
 import { validateFoControl } from "./tranext.js";
-import { detectInboundKind, runUnload } from "./unload.js";
+import { detectInboundKind, mapMiscFileRow, runUnload } from "./unload.js";
 
 function check(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -52,6 +56,7 @@ check(result.mapped.grpRows > 0, `grp mapped ${result.mapped.grpRows}`);
 check(store.currLedge.length > 0, "currledge filled");
 check(result.logs.some((l) => l.step === "map-focus"), "map-focus log");
 check(result.logs.some((l) => l.step === "tranext-plan"), "tranext log");
+check(result.logs.some((l) => l.step === "miscrenm" && l.detail.includes("skip")), "miscrenm skip without dir");
 
 // TRANEXT pack + FO_TCDBF control OK → FOCUS still maps
 {
@@ -150,6 +155,100 @@ check(result.logs.some((l) => l.step === "tranext-plan"), "tranext log");
     { code: "RA", ok: true, read: 2, written: 2, rejected: 0, detail: "r" },
   ]);
   check(good.ok && good.actualCount === 2, "Σ match");
+}
+
+// mapMiscFileRow dtltype = iacttype + inortype
+{
+  const row = mapMiscFileRow(
+    { IACTTYPE: "OR", INORTYPE: "CASH", INORNO: "X1", INPAMT: "50" },
+    "20261119",
+  );
+  check(row.dtlType === "ORCASH", `dtl ${row.dtlType}`);
+  check(row.inprdate === "20261119", "inprdate default");
+}
+
+// MISCRENM rename + inboundDir ImportFile → BPY map
+{
+  const dir = mkdtempSync(join(tmpdir(), "miscrenm-"));
+  try {
+    const fields = [
+      { name: "ICDRCD", length: 3 },
+      { name: "IPOLNO", length: 10 },
+      { name: "INPLN", length: 15 },
+      { name: "INPFN", length: 1 },
+      { name: "INPMI", length: 1 },
+      { name: "IACTTYPE", length: 2 },
+      { name: "INORTYPE", length: 4 },
+      { name: "IACTCD", length: 6 },
+      { name: "INPSGN", length: 1 },
+      { name: "INPAMT", length: 13 },
+      { name: "INORNO", length: 7 },
+      { name: "INDATE", length: 8 },
+      { name: "INPSRC", length: 3 },
+      { name: "INPENT", length: 10 },
+      { name: "INPSTP", length: 2 },
+      { name: "IAGTCD", length: 9 },
+      { name: "INCVNO", length: 10 },
+      { name: "INCKNO", length: 6 },
+      { name: "DTLTYPE", length: 8 },
+      { name: "INPRDATE", length: 8 },
+    ];
+    const bpyRecs = demoBpyRows().map((r) => ({
+      ICDRCD: r.icdrcd,
+      IPOLNO: r.ipolno,
+      INPLN: r.inpln,
+      INPFN: r.inpfn,
+      INPMI: r.inpmi,
+      IACTTYPE: r.iactType,
+      INORTYPE: r.inorType,
+      IACTCD: r.iactcd,
+      INPSGN: r.inpsgn,
+      INPAMT: String(r.inpamt),
+      INORNO: r.inorno,
+      INDATE: r.indate,
+      INPSRC: r.inpsrc,
+      INPENT: r.inpent,
+      INPSTP: r.inpstp,
+      IAGTCD: r.iagtcd,
+      INCVNO: r.incvno,
+      INCKNO: r.inckno,
+      DTLTYPE: "", // force iact+inor rebuild
+      INPRDATE: "",
+    }));
+    const trnPath = join(dir, "0806BPY.TRN");
+    writeDbfFile(trnPath, fields, bpyRecs);
+    check(existsSync(trnPath), "wrote TRN");
+
+    const s = createStore();
+    const r = runUnload(s, {
+      userId: "DEMO",
+      mapDownstream: true,
+      inboundDir: dir,
+      messages: [],
+      inbound: [],
+    });
+    check(r.logs.some((l) => l.step === "miscrenm" && l.ok && l.detail.includes("renamed")), "miscrenm renamed");
+    check(existsSync(join(dir, "0806BPY.DBF")), "DBF after unload MISCRENM");
+    check(!existsSync(trnPath), "TRN removed by unload");
+    check(r.brsFiles === 1, `brs ${r.brsFiles}`);
+    check(s.bpyFileX.length === 2, `bpy archived ${s.bpyFileX.length}`);
+    check(s.bpyFileX[0]!.dtlType === "ORCASH", `dtl from import ${s.bpyFileX[0]?.dtlType}`);
+    check(r.mapped.bpyRows > 0, `bpy mapped from DBF ${r.mapped.bpyRows}`);
+    check(r.logs.some((l) => l.step === "brs" && l.detail.includes("ImportFile")), "brs ImportFile log");
+
+    // Direct rename helper still works on a fresh TRN
+    writeDbfFile(join(dir, "0806GRP.TRN"), fields, bpyRecs);
+    const ren = renameTrnToDbf(dir);
+    check(ren.ok && ren.renames.some((x) => x.to.endsWith("0806GRP.DBF")), `direct rename ${ren.detail}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// Missing inbound dir is soft-ok
+{
+  const ren = renameTrnToDbf("/tmp/does-not-exist-miscrenm-xyz");
+  check(ren.ok && ren.renames.length === 0, "missing dir skip");
 }
 
 console.log("unload.test.ts: OK");

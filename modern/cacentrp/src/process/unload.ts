@@ -2,20 +2,22 @@
  * Port of w_unload daily unload orchestration (ue_process / wf_procmail / wf_procmiscfiles).
  *
  * Control flow:
- *   1. MISCRENM.BAT (logged)
+ *   1. MISCRENM — rename inbound *.TRN → *.DBF (optional inboundDir)
  *   2. Mail subjects CAC-LSP File / NO CAC-LSP File → FOCUS/CDR attachments
- *   3. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI)
+ *   3. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI); ImportFile when rows omitted
  *   4. Optional mapDownstream → call ported FOCUS/CDR/BPY/GRP mappers
  *
  * TRANEXT: optional tranextDir → ImportFile + wf_write2* (typed CS/DA/RA/FO_TCDBF).
  */
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { runBpyMapping } from "./bpy.js";
 import { runCdrMapping, type CdrInput } from "./cdr.js";
+import { readDbfFile } from "./dbf.js";
 import { DEMO_ACCTENT, DEMO_PARAMS, demoCdrInput, demoFocusInput } from "./fixtures.js";
 import { runFocusMapping, type FocusInput } from "./focus.js";
 import { runGrpMapping } from "./grp.js";
+import { renameTrnToDbf } from "./miscrenm.js";
 import type { BpyFileRow, DailyStore, GrpFileRow } from "./store.js";
 import {
   FOCUS_TRANEXT_FILES,
@@ -51,6 +53,11 @@ export interface InboundDbf {
 export interface UnloadInput {
   messages: MailMessage[];
   inbound: InboundDbf[];
+  /**
+   * Legacy `C:\tci\inbound` — run MISCRENM (*.TRN→*.DBF) then scan *.DBF.
+   * Scanned files merge with `inbound` (explicit paths win on duplicate).
+   */
+  inboundDir?: string;
   /** SYRPARAM-style extension → company map */
   fcsExtensions?: {
     ap?: string;
@@ -162,9 +169,81 @@ function shortSubFile(name: string): string {
   return basename(name).replace(/\.[^.]+$/, "").slice(0, 8).toUpperCase();
 }
 
+function dbfField(row: Record<string, unknown>, ...names: string[]): string {
+  for (const n of names) {
+    const hit = Object.keys(row).find((k) => k.toUpperCase() === n.toUpperCase());
+    if (hit !== undefined && row[hit] !== undefined && row[hit] !== null) {
+      return String(row[hit]).trim();
+    }
+  }
+  return "";
+}
+
+/** Map ImportFile / DBF row → BPYFILE/GRPFILE shape; dtltype = iacttype+inortype. */
+export function mapMiscFileRow(
+  row: Record<string, unknown>,
+  processDateYmd: string,
+): BpyFileRow {
+  const iactType = dbfField(row, "iactType", "IACTTYPE");
+  const inorType = dbfField(row, "inorType", "INORTYPE");
+  const dtlExisting = dbfField(row, "dtlType", "DTLTYPE");
+  return {
+    icdrcd: dbfField(row, "icdrcd", "ICDRCD"),
+    ipolno: dbfField(row, "ipolno", "IPOLNO"),
+    inpln: dbfField(row, "inpln", "INPLN"),
+    inpfn: dbfField(row, "inpfn", "INPFN"),
+    inpmi: dbfField(row, "inpmi", "INPMI"),
+    iactType,
+    inorType,
+    iactcd: dbfField(row, "iactcd", "IACTCD"),
+    inpsgn: dbfField(row, "inpsgn", "INPSGN") || " ",
+    inpamt: dbfField(row, "inpamt", "INPAMT") || "0",
+    inorno: dbfField(row, "inorno", "INORNO"),
+    indate: dbfField(row, "indate", "INDATE"),
+    inpsrc: dbfField(row, "inpsrc", "INPSRC"),
+    inpent: dbfField(row, "inpent", "INPENT"),
+    inpstp: dbfField(row, "inpstp", "INPSTP"),
+    iagtcd: dbfField(row, "iagtcd", "IAGTCD"),
+    incvno: dbfField(row, "incvno", "INCVNO"),
+    inckno: dbfField(row, "inckno", "INCKNO"),
+    inprdate: dbfField(row, "inprdate", "INPRDATE") || processDateYmd,
+    dtlType: dtlExisting || `${iactType}${inorType}`,
+  };
+}
+
+function loadMiscRowsFromPath(
+  path: string,
+  processDateYmd: string,
+): { rows: BpyFileRow[]; detail: string; ok: boolean } {
+  if (!existsSync(path)) {
+    return { rows: [], detail: `file missing: ${path}`, ok: false };
+  }
+  try {
+    const table = readDbfFile(path);
+    const rows = table.records.map((r) =>
+      mapMiscFileRow(r as Record<string, unknown>, processDateYmd),
+    );
+    return { rows, detail: `ImportFile ${rows.length} row(s)`, ok: true };
+  } catch (e) {
+    return {
+      rows: [],
+      detail: `ImportFile failed: ${e instanceof Error ? e.message : String(e)}`,
+      ok: false,
+    };
+  }
+}
+
+function mergeInbound(explicit: InboundDbf[], scanned: InboundDbf[]): InboundDbf[] {
+  const byPath = new Map<string, InboundDbf>();
+  for (const f of scanned) byPath.set(f.path.toUpperCase(), f);
+  for (const f of explicit) byPath.set(f.path.toUpperCase(), f); // explicit wins
+  return [...byPath.values()];
+}
+
 export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   const logs: UnloadStepLog[] = [];
   const today = new Date().toISOString().slice(0, 10);
+  const procYmd = today.replace(/-/g, "");
   const extMap = input.fcsExtensions ?? {
     ap: "FCP",
     alai: "FCS",
@@ -178,11 +257,15 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   const tranextPlan = new Set<TranextCode>();
   let foControlOk: boolean | undefined;
 
+  const misc = renameTrnToDbf(input.inboundDir ?? "");
   logs.push({
     step: "miscrenm",
-    detail: "Would RUN MISCRENM.BAT (rename BRS/SSI → DBF)",
-    ok: true,
+    detail: misc.detail,
+    ok: misc.ok,
   });
+
+  const scanned = input.inboundDir ? scanInboundDir(input.inboundDir) : [];
+  const inboundFiles = mergeInbound(input.inbound ?? [], scanned);
 
   const candidates = input.messages.filter((m) => {
     const s = m.subject.trim().toUpperCase();
@@ -262,9 +345,21 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
 
   let brsFiles = 0;
   let ssiFiles = 0;
-  for (const file of input.inbound) {
+  for (const file of inboundFiles) {
     if (file.kind === "BRS") {
-      const rows = file.rows ? (file.rows as unknown as BpyFileRow[]) : [];
+      let rows: BpyFileRow[] = file.rows
+        ? (file.rows as unknown as BpyFileRow[]).map((r) =>
+            mapMiscFileRow(r as unknown as Record<string, unknown>, procYmd),
+          )
+        : [];
+      let importOk = true;
+      let importDetail = "";
+      if (!file.rows) {
+        const loaded = loadMiscRowsFromPath(file.path, procYmd);
+        rows = loaded.rows;
+        importOk = loaded.ok;
+        importDetail = loaded.detail;
+      }
       store.bpyFile.push(...rows);
       store.bdoApMst.push({
         company: "ALAI",
@@ -280,11 +375,27 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
         step: "brs",
         detail:
           `${file.path} → BPYFILE → w_bpyinterfaceprocess` +
-          (rows.length ? ` (${rows.length} rows)` : " (empty — supply rows or run daily bpy)"),
-        ok: true,
+          (rows.length
+            ? ` (${rows.length} rows${importDetail ? `; ${importDetail}` : ""})`
+            : importDetail
+              ? ` (${importDetail})`
+              : " (empty — supply rows or --inboundDir DBF)"),
+        ok: importOk || rows.length > 0,
       });
     } else if (file.kind === "SSI") {
-      const rows = file.rows ? (file.rows as unknown as GrpFileRow[]) : [];
+      let rows: GrpFileRow[] = file.rows
+        ? (file.rows as unknown as GrpFileRow[]).map((r) =>
+            mapMiscFileRow(r as unknown as Record<string, unknown>, procYmd),
+          )
+        : [];
+      let importOk = true;
+      let importDetail = "";
+      if (!file.rows) {
+        const loaded = loadMiscRowsFromPath(file.path, procYmd);
+        rows = loaded.rows;
+        importOk = loaded.ok;
+        importDetail = loaded.detail;
+      }
       store.grpFile.push(...rows);
       store.bdoApMst.push({
         company: "ALAI",
@@ -300,15 +411,19 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
         step: "ssi",
         detail:
           `${file.path} → GRPFILE → w_grpinterfaceprocess` +
-          (rows.length ? ` (${rows.length} rows)` : " (empty — supply rows or run daily grp)"),
-        ok: true,
+          (rows.length
+            ? ` (${rows.length} rows${importDetail ? `; ${importDetail}` : ""})`
+            : importDetail
+              ? ` (${importDetail})`
+              : " (empty — supply rows or --inboundDir DBF)"),
+        ok: importOk || rows.length > 0,
       });
     } else {
       logs.push({ step: "inbound-skip", detail: `${file.path}: not BPY/GRP`, ok: false });
     }
   }
 
-  if (input.inbound.length === 0) {
+  if (inboundFiles.length === 0) {
     logs.push({ step: "inbound", detail: "No BRS/SSI Files To Process", ok: true });
   }
 
