@@ -12,7 +12,7 @@
 
 1. Load params: SYRCACPARAM `101` (excess cash), `102` (cash clearing), `103`/`104` (excess/short PAYTYPE), `105` (OR excess/short tol), `106` (gain/loss); SYRUNIT for FO unit  
 2. Retrieve OR cash / check / item / unique DataWindows  
-3. **`wf_processcollection`** — gate each OR: must appear in cash and/or check (`ORAMTPDFAIL` → BDO **`J`**); `|paid − items|` ≤ param **105** (`ORSHRTEXEFAIL` → **`K`**); within-tol short/over → adjust first item or insert param **103/104** line + **`ORSHORTOVER`**; map cash + **check** + items with ACCTENT **`SRCMAP`** `COLL` (PHP) / `CSHD` / `CHKD` (USD); skip `ORSTATCODE='C'`  
+3. **`wf_processcollection`** — gate each OR: must appear in cash and/or check (`ORAMTPDFAIL` → BDO **`J`**); `|paid − items|` ≤ param **105** (`ORSHRTEXEFAIL` → **`K`**); within-tol short/over → adjust first item or insert param **103/104** line + **`ORSHORTOVER`**; **`dw_dtlcshchk`** counters (`dtl`/`cash`/`check`) drive `COLL`/`CSHD`/`CHKD` and reject unsupported USD multi-detail mixes; USD single-detail cash+check uses tender-amount path (`modes=2`); skip `ORSTATCODE='C'`  
 4. **`wf_proccollpdr`** (when OR items match `SYRPDRPARM.TRANTYPE`)  
 5. **`wf_processdisbursement`** (maps DIS cash + **check** + items + **add/ded**; DIS check prefers `ACCTENT.BANKCODE` = `DISCHECKCURR.BANKCODE` + `SRCMAP=DISB`; applies **`wf_spcexcsh`**; ends with **`wf_fundtransfer`**, then **`wf_procdisbnet`** when `SYRNETPARM` products exist)  
 6. **`wf_processdeposit`**  
@@ -51,4 +51,4 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 
 ## Still pending
 
-Multi-detail USD mix payment-mode edge cases / `dw_dtlcshchk` counters; SYRADJPARM adj loop is empty in extracted PB source.
+SYRADJPARM adj loop is empty in extracted PB source; residual FOCUS DataWindow field parity.

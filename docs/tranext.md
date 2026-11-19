@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-Multi-detail USD mix / `dw_dtlcshchk` counters (USD `CSHD`/`CHKD` + DIS bank join done).
+Residual FOCUS DataWindow field parity (`dw_dtlcshchk` counters done).

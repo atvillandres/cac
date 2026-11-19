@@ -3,7 +3,10 @@
  */
 import { createStore } from "./store.js";
 import {
+  isUnsupportedUsdMix,
   numberSignFor,
+  orDtlCshChkCounters,
+  planOrCollection,
   processDisAddDed,
   processDisbNet,
   runFocusMapping,
@@ -1054,6 +1057,152 @@ const STAGE_ORDER =
   check(
     cashResult.mapFocus.some((r) => r.refNo === "ORUSD002" && r.acctCode === "401101"),
     "USD cash item → CSHD prem 401101",
+  );
+}
+
+// dw_dtlcshchk counters + unsupported USD multi-detail mix
+{
+  const today = new Date().toISOString().slice(0, 10);
+  const base: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORMIX1",
+        orDate: today,
+        currency: "USD",
+        cashAmt: 40,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orCheck: [
+      {
+        orNo: "ORMIX1",
+        orDate: today,
+        currency: "USD",
+        checkAmt: 60,
+        payType: "CHK",
+        acctType: "ORCASH",
+        checkNo: "M1",
+      },
+      {
+        orNo: "ORMIX1",
+        orDate: today,
+        currency: "USD",
+        checkAmt: 10,
+        payType: "CHK",
+        acctType: "ORCASH",
+        checkNo: "M2",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORMIX1",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 50,
+        acctType: "ORPREM",
+        currency: "USD",
+      },
+      {
+        orNo: "ORMIX1",
+        orDate: today,
+        itemNo: 2,
+        payType: "CSH",
+        orItemAmt: 60,
+        acctType: "ORPREM",
+        currency: "USD",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const c = orDtlCshChkCounters(base, "ORMIX1");
+  check(c.dtlCount === 2 && c.cashCount === 1 && c.checkCount === 2, "dtlcshchk counters");
+  check(isUnsupportedUsdMix(c), "USD multi-dtl + cash + checks unsupported");
+
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const result = runFocusMapping(store, base);
+  check(!result.ok, "unsupported mix should fail");
+  check(result.stages.some((s) => s.detail.includes("unsupported USD mix")), "mix error message");
+  check(store.bdoApMst[0]!.status === "J", "BDOAPMST J on mix reject");
+}
+
+// USD single-detail cash+check → tender amount path (modes=2)
+{
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806TND",
+    userId: "DEMO",
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    orCash: [
+      {
+        orNo: "ORUSD3",
+        orDate: today,
+        currency: "USD",
+        cashAmt: 30,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orCheck: [
+      {
+        orNo: "ORUSD3",
+        orDate: today,
+        currency: "USD",
+        checkAmt: 70,
+        payType: "CHK",
+        acctType: "ORCASH",
+        checkNo: "U3",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORUSD3",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 100,
+        acctType: "ORPREM",
+        currency: "USD",
+      },
+    ],
+    disCash: [],
+    disItems: [],
+  };
+  const plan = planOrCollection(input, "ORUSD3");
+  check(plan.tenderAmountPath && plan.paymentModes === 2, "USD single-dtl mix tender path");
+  check(!plan.mapItems, "items skipped on tender path");
+  const result = runFocusMapping(store, input);
+  check(result.ok, `USD tender path failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(result.stages[0]?.detail.includes("modes=2"), "collection detail shows modes=2");
+  check(
+    result.mapFocus.some((r) => r.acctCode === "101101" && r.amount === 30) &&
+      result.mapFocus.some((r) => r.acctCode === "101102" && r.amount === 70),
+    "cash CSHD + check CHKD tenders",
+  );
+  check(
+    result.mapFocus.some((r) => r.acctCode === "401101" && r.amount === 30) &&
+      result.mapFocus.some((r) => r.acctCode === "401102" && r.amount === 70),
+    "premium legs follow tender amounts",
   );
 }
 
