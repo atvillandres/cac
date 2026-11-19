@@ -170,6 +170,20 @@ export const DEMO_ACCTENT: AcctEntRule[] = [
     drCr: "DR",
     lob: "01",
   },
+  {
+    coCode: "AP",
+    tranType: "CACPAR01",
+    acctCode: "214000",
+    drCr: "CR",
+    lob: "01",
+  },
+  {
+    coCode: "ALAI",
+    tranType: "CACPAR01",
+    acctCode: "214000",
+    drCr: "CR",
+    lob: "01",
+  },
 ];
 
 export function demoFocusInput(userId = "DEMO"): FocusInput {

@@ -52,6 +52,10 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 - CLI: `cacentrp daily tranext [--tranext dir]` / `daily aptrans`  
 - Unload: `--tranext <dir>` on `daily unload` / `daily run`
 
+## FO control check
+
+`validateFoControl(store, loadResults)` sums `TC_COUNT` across `foControl` rows and compares to Σ`written` on pack members (excluding `FO_TCDBF`). Unload logs `fo-control` and sets `foControlOk`; a mismatch skips FOCUS `mapDownstream` only.
+
 ## Still pending
 
-Unload/FO control polish or CDR depth (FOCUS `agtNo`/`unitCode` + spc unit bridge done).
+Outside FOCUS/CDR core — e.g. empty SYRADJPARM adj loop, richer mail/MISCRENM automation.

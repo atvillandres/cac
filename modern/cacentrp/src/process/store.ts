@@ -102,6 +102,8 @@ export interface ApTransStoreRow {
   unit?: string;
   status?: string;
   processDate?: string;
+  /** Optional agent for f_getspcunitcode ORIG path (CDR). */
+  agtNo?: string;
 }
 
 export interface ApDepositStoreRow {

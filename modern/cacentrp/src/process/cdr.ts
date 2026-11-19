@@ -14,6 +14,11 @@ import {
   type CurrLedgeRow,
   type ProcCdrVar,
 } from "./currledge.js";
+import {
+  numberSignFor,
+  resolveFocusUnit,
+  type FocusUnitMaps,
+} from "./focus.js";
 import type { DailyStore } from "./store.js";
 
 export interface ApTransRow {
@@ -25,6 +30,8 @@ export interface ApTransRow {
   payType?: string;
   unit?: string;
   status?: string;
+  /** Optional agent for f_getspcunitcode ORIG path. */
+  agtNo?: string;
 }
 
 export interface ApDepositRow {
@@ -41,6 +48,13 @@ export interface CdrInput {
   userId: string;
   apTrans?: ApTransRow[];
   apDeposits?: ApDepositRow[];
+  /** Unit resolution maps (same shape as FOCUS `unitMaps`). */
+  unitMaps?: FocusUnitMaps;
+  /**
+   * When true (default), post trial imbalance to CACPAR01 / excess cash.
+   * When false, fail like strict FOCUS balentries (map → unbalCurrLedge).
+   */
+  autoBalanceExcessCash?: boolean;
 }
 
 export interface CdrResult {
@@ -49,6 +63,51 @@ export interface CdrResult {
   rows: CurrLedgeRow[];
   batchFile: string;
   totals: { debit: number; credit: number };
+}
+
+function applyCdrUnit(
+  row: CurrLedgeRow,
+  input: CdrInput,
+  agtNo?: string,
+): CurrLedgeRow {
+  row.unit = resolveFocusUnit({
+    coCode: row.coCode || input.proc.compCode,
+    acctCode: row.acctCode,
+    agtNo,
+    foUnit: row.unit || input.params.foUnit || "",
+    maps: input.unitMaps,
+  });
+  row.numberSign = numberSignFor(row.drCr, row.acctCode);
+  return row;
+}
+
+function failCdr(
+  store: DailyStore,
+  input: CdrInput,
+  rows: CurrLedgeRow[],
+  detail: string,
+): CdrResult {
+  if (rows.length) {
+    store.unbalCurrLedge.push(...rows.map((r) => ({ ...r })));
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  for (const row of store.bdoApMst) {
+    if (
+      row.company === input.proc.compCode &&
+      row.bdoCode === input.proc.foCode &&
+      row.processDate === today &&
+      row.source === "2"
+    ) {
+      row.status = "J";
+    }
+  }
+  return {
+    ok: false,
+    detail,
+    rows,
+    batchFile: "Error.bat",
+    totals: debitCreditTotals(rows),
+  };
 }
 
 export function runCdrMapping(store: DailyStore, input: CdrInput): CdrResult {
@@ -63,97 +122,134 @@ export function runCdrMapping(store: DailyStore, input: CdrInput): CdrResult {
   }
 
   const rows: CurrLedgeRow[] = [];
-  const openTrans = (input.apTrans ?? []).filter((r) => !r.status || r.status.trim() === "");
-  const openDeps = (input.apDeposits ?? []).filter((r) => !r.status || r.status.trim() === "");
+  const openTrans = (input.apTrans !== undefined ? input.apTrans : store.apTrans).filter(
+    (r) => !r.status || r.status.trim() === "",
+  );
+  const openDeps = (input.apDeposits !== undefined ? input.apDeposits : store.apDeposits).filter(
+    (r) => !r.status || r.status.trim() === "",
+  );
 
   for (const t of openTrans) {
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, t.acctType, t.payType);
     if (!rule) {
-      return {
-        ok: false,
-        detail: `No ACCTENT for APTRANS acctType=${t.acctType} payType=${t.payType ?? ""}`,
+      return failCdr(
+        store,
+        input,
         rows,
-        batchFile: "Error.bat",
-        totals: debitCreditTotals(rows),
-      };
+        `No ACCTENT for APTRANS acctType=${t.acctType} payType=${t.payType ?? ""}`,
+      );
     }
-    rows.push(
-      applyAcctEnt(
-        {
-          foCode: input.proc.foCode,
-          refNo: t.docNum,
-          refDate: t.docDate,
-          payType: t.payType,
-          unit: t.unit ?? input.params.foUnit ?? "",
-        },
-        rule,
-        t.amount,
-        {
-          sourceType: "CD",
-          userId: input.userId,
-          tranDate: t.docDate,
-        },
-      ),
+    const row = applyAcctEnt(
+      {
+        foCode: input.proc.foCode,
+        refNo: t.docNum,
+        refDate: t.docDate,
+        payType: t.payType,
+        unit: t.unit ?? input.params.foUnit ?? "",
+      },
+      rule,
+      t.amount,
+      {
+        sourceType: "CD",
+        userId: input.userId,
+        tranDate: t.docDate,
+      },
     );
+    rows.push(applyCdrUnit(row, input, t.agtNo));
   }
 
   for (const d of openDeps) {
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, d.bankAcct);
     if (!rule) {
-      return {
-        ok: false,
-        detail: `No ACCTENT for APDEPOSIT bankAcct=${d.bankAcct}`,
+      return failCdr(
+        store,
+        input,
         rows,
-        batchFile: "Error.bat",
-        totals: debitCreditTotals(rows),
-      };
+        `No ACCTENT for APDEPOSIT bankAcct=${d.bankAcct}`,
+      );
     }
-    rows.push(
-      applyAcctEnt(
-        {
-          foCode: input.proc.foCode,
-          refNo: "",
-          refDate: d.tranDate,
-          unit: input.params.foUnit ?? "",
-        },
-        rule,
-        d.amount,
-        {
-          sourceType: "CD",
-          userId: input.userId,
-          tranDate: d.tranDate,
-        },
-      ),
+    const row = applyAcctEnt(
+      {
+        foCode: input.proc.foCode,
+        refNo: "",
+        refDate: d.tranDate,
+        unit: input.params.foUnit ?? "",
+      },
+      rule,
+      d.amount,
+      {
+        sourceType: "CD",
+        userId: input.userId,
+        tranDate: d.tranDate,
+      },
     );
+    rows.push(applyCdrUnit(row, input));
   }
 
-  // FO excess cash balancing (simplified from c_mapfoexcess)
+  // FO excess cash balancing (c_mapfoexcess / CACPAR01)
   const { debit, credit } = debitCreditTotals(rows);
   const diff = Math.round((debit - credit) * 100) / 100;
   if (diff !== 0) {
-    rows.push({
-      coCode: input.proc.compCode,
-      foCode: input.proc.foCode,
-      refNo: "",
-      refDate: input.proc.dateRec,
-      sourceType: "CD",
-      acctCode: input.params.excessCashAcct,
-      drCr: diff > 0 ? "CR" : "DR",
-      amount: Math.abs(diff),
-      unit: input.params.foUnit ?? "",
-      origCy: "PHP",
-      locCy: "PHP",
-      lob: "01",
-      processDate: new Date().toISOString().slice(0, 10),
-      recDest: "",
-      controlNo: "",
-      lspAccType: "",
-      lspOrType: "",
-      payType: "",
-      effectDate: new Date().toISOString().slice(0, 10),
-      userId: input.userId,
-      tranType: "CACPAR01",
-    });
+    if (input.autoBalanceExcessCash === false) {
+      return failCdr(
+        store,
+        input,
+        rows,
+        `CDR trial imbalance DR=${debit} CR=${credit}; autoBalanceExcessCash=false`,
+      );
+    }
+    const cacRule = matchAcctEnt(input.acctEnt, input.proc.compCode, "CACPAR01");
+    if (cacRule) {
+      const row = applyAcctEnt(
+        {
+          foCode: input.proc.foCode,
+          refNo: "",
+          refDate: input.proc.dateRec,
+          unit: input.params.foUnit ?? "",
+        },
+        cacRule,
+        Math.abs(diff),
+        {
+          sourceType: "CD",
+          userId: input.userId,
+          tranDate: input.proc.dateRec,
+        },
+      );
+      // Imbalance sign: debit-heavy → CR excess; credit-heavy → DR excess
+      if (diff > 0) row.drCr = "CR";
+      else row.drCr = "DR";
+      row.amount = Math.abs(diff);
+      rows.push(applyCdrUnit(row, input));
+    } else {
+      rows.push(
+        applyCdrUnit(
+          {
+            coCode: input.proc.compCode,
+            foCode: input.proc.foCode,
+            refNo: "",
+            refDate: input.proc.dateRec,
+            sourceType: "CD",
+            acctCode: input.params.excessCashAcct,
+            drCr: diff > 0 ? "CR" : "DR",
+            amount: Math.abs(diff),
+            unit: input.params.foUnit ?? "",
+            origCy: "PHP",
+            locCy: "PHP",
+            lob: "01",
+            processDate: new Date().toISOString().slice(0, 10),
+            recDest: "",
+            controlNo: "",
+            lspAccType: "",
+            lspOrType: "",
+            payType: "",
+            effectDate: new Date().toISOString().slice(0, 10),
+            userId: input.userId,
+            tranType: "CACPAR01",
+          },
+          input,
+        ),
+      );
+    }
   }
 
   // Persist

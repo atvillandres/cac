@@ -32,8 +32,9 @@ On failure: **`wf_processreject`** — set BDOAPMST status, copy `mapfocus` → 
 - Cursor join `APTRANS` ⋈ `ACCTENT` on `ACCTTYPE = TRANTYPE` (+ optional PAYTYPE)  
 - Cursor join `APDEPOSIT` ⋈ `ACCTENT` on `BANKACCT = TRANTYPE`  
 - Build `STR_CURRLEDGE` (`sourcetype='CD'`), normalize negative amounts (flip DR/CR)  
-- Excess-cash balancing via `CACPAR01` / param 101  
-- Persist to `CURRLEDGE`; archive APTRANS/APDEPOSIT/CASHBALANCE → `*X`
+- Apply `numberSign` (`*` on DR for `214000` / `205002`) and `f_getspcunitcode` via optional `unitMaps` + `agtNo`  
+- Excess-cash balancing via `ACCTENT` tranType **`CACPAR01`** (else param **101** excess cash acct); set `autoBalanceExcessCash=false` for strict FOCUS-style fail → `unbalCurrLedge` + BDO **`J`**  
+- Persist to `CURRLEDGE`; archive APTRANS/APDEPOSIT/CASHBALANCE → `*X`; BDO **`L`** on success
 
 ## Shared structure (`str_currledge`)
 
@@ -46,9 +47,9 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 - `src/process/currledge.ts` — structure + helpers (`numberSign` optional)  
 - `src/process/focus.ts` — stage pipeline (collection → collPdr → disbursement → disAddDed → fundTransfer → disbNet → deposit → balance → complete)  
 - `src/process/store.ts` — `unbalDocs` (`UNBALDOC`), `errCashBal` (`ERRCASHBAL`), `orAmtPdFail` / `orShrtExeFail` / `orShortOver`, `focusWorkingU` (`*U`) / `focusWorkingX` (`*X`)  
-- `src/process/cdr.ts` — APTRANS/APDEPOSIT mapper  
+- `src/process/cdr.ts` — APTRANS/APDEPOSIT mapper (`CACPAR01`, unitMaps, fail → `unbalCurrLedge`)  
 - CLI: `cacentrp daily focus` / `cacentrp daily cdr`
 
 ## Still pending
 
-SYRADJPARM adj loop is empty in extracted PB source (no-op). FOCUS core mapping depth is otherwise complete for this modernization track.
+SYRADJPARM adj loop is empty in extracted PB source (no-op). FOCUS + CDR core mapping depth is otherwise complete for this modernization track.
