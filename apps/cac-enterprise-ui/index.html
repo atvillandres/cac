@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAC Enterprise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <!-- LOGIN -->
+  <section id="view-login" class="view view-login is-active" aria-label="Sign in">
+    <div class="login-stage">
+      <header class="brand-block">
+        <p class="brand-mark">CAC Enterprise</p>
+        <h1 class="brand-tagline">Centralized Accounting Channel</h1>
+        <p class="brand-sub">Daily FO processing from unload through GL Walker file generation.</p>
+      </header>
+
+      <form id="login-form" class="login-panel" autocomplete="on">
+        <label class="field">
+          <span>Variant</span>
+          <select id="variant" name="variant">
+            <option value="ALAI">ALAI</option>
+            <option value="AP">AP</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>User ID</span>
+          <input id="userId" name="user" type="text" value="DEMO" required />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="password" name="password" type="password" value="demo" required />
+        </label>
+        <button type="submit" class="btn btn-primary">Open daily processing</button>
+        <p class="hint">Sample sign-in — mirrors <code>cacentrp</code> login shell.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- APP SHELL -->
+  <section id="view-app" class="view view-app" aria-label="Daily processing" hidden>
+    <header class="app-bar">
+      <div class="app-bar-brand">
+        <span class="app-logo">CAC</span>
+        <div>
+          <strong>CAC Enterprise</strong>
+          <small id="session-meta">ALAI · DEMO</small>
+        </div>
+      </div>
+      <nav class="app-nav" aria-label="Primary">
+        <button type="button" class="nav-link is-active" data-panel="daily">Daily Processing</button>
+        <button type="button" class="nav-link" data-panel="glw" disabled title="Run Create GLW first">GLW Output</button>
+      </nav>
+      <button type="button" id="btn-signout" class="btn btn-ghost">Sign out</button>
+    </header>
+
+    <main class="app-main">
+      <aside class="stage-rail" aria-label="Pipeline stages">
+        <h2>Pipeline</h2>
+        <ol id="stage-list" class="stage-list"></ol>
+      </aside>
+
+      <div class="workspace">
+        <header class="workspace-head">
+          <div>
+            <p class="eyebrow" id="ws-eyebrow">Daily Processing</p>
+            <h2 id="ws-title">Auto Email Detach</h2>
+            <p id="ws-desc" class="muted">Classify FO mail, load TRANEXT, map into CURRLEDGE.</p>
+          </div>
+          <div class="workspace-actions">
+            <button type="button" id="btn-run-step" class="btn btn-primary">Run step</button>
+            <button type="button" id="btn-run-all" class="btn btn-secondary">Run through GLW</button>
+          </div>
+        </header>
+
+        <div class="workspace-body">
+          <div class="log-panel">
+            <div class="panel-label">Activity</div>
+            <ul id="activity-log" class="activity-log"></ul>
+          </div>
+          <div class="status-panel">
+            <div class="panel-label">Working store</div>
+            <div class="stat-grid">
+              <div class="stat"><span>CURRLEDGE</span><strong id="stat-ledge">0</strong></div>
+              <div class="stat"><span>BDOAPMST</span><strong id="stat-bdo">0</strong></div>
+              <div class="stat"><span>FOCUS jobs</span><strong id="stat-focus">0</strong></div>
+              <div class="stat"><span>CDR jobs</span><strong id="stat-cdr">0</strong></div>
+            </div>
+            <div class="glw-preview" id="glw-box" hidden>
+              <div class="panel-label">Generated GLW files</div>
+              <ul id="glw-files" class="file-list"></ul>
+              <button type="button" id="btn-view-glw" class="btn btn-secondary">Open GLW console</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- GLW DETAIL -->
+  <section id="view-glw" class="view view-glw" aria-label="GLW output" hidden>
+    <header class="app-bar">
+      <div class="app-bar-brand">
+        <span class="app-logo">CAC</span>
+        <div>
+          <strong>Create GL Walker Text File</strong>
+          <small>w_glwalker · NLSP CURRLEDGE + LSP GLWDTL</small>
+        </div>
+      </div>
+      <button type="button" id="btn-back-daily" class="btn btn-ghost">← Daily processing</button>
+    </header>
+    <main class="glw-main">
+      <div class="glw-hero">
+        <p class="eyebrow">Merge LSP and Non-LSP</p>
+        <h2 id="glw-day-title">GLW pack for today</h2>
+        <p class="muted">Fixed-width control (00) → header (01) → detail (02). Path: sample <code>out/glwalker/</code></p>
+      </div>
+      <div class="glw-cards" id="glw-cards"></div>
+      <pre class="glw-snippet" id="glw-snippet" aria-label="Sample GLW lines"></pre>
+      <div class="glw-foot">
+        <button type="button" id="btn-eod" class="btn btn-primary">Run End of Day</button>
+        <p class="hint" id="eod-msg"></p>
+      </div>
+    </main>
+  </section>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
