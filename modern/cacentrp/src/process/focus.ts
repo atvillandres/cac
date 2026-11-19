@@ -61,6 +61,8 @@ export interface OrItemRow {
   orItemAmt: number;
   acctType: string;
   currency?: string;
+  /** ORITEMCURR.AGTNO — feeds f_getspcunitcode ORIG path. */
+  agtNo?: string;
 }
 
 /** PDR collection detail (wf_proccollpdr) — ORITEMDTLCURR rows gated by SYRPDRPARM. */
@@ -114,6 +116,10 @@ export interface DisItemRow {
   payType?: string;
   acctType: string;
   currency?: string;
+  /** DISITEMCURR.AGTNO — feeds f_getspcunitcode ORIG path. */
+  agtNo?: string;
+  /** DISITEMDTLCURR.UNITCODE when present. */
+  unitCode?: string;
 }
 
 export interface DepositRow {
@@ -257,6 +263,49 @@ export interface FocusInput {
    * Default false — matches legacy wf_balentries (fail H on trial imbalance).
    */
   autoBalanceExcessCash?: boolean;
+  /**
+   * Unit resolution maps for `f_getspcunitcode` (COLL / DISB).
+   * Keys use `${coCode}|${acctCode}` / `${coCode}|${agtNo}` / `${coCode}|${foCode}`.
+   */
+  unitMaps?: FocusUnitMaps;
+}
+
+/** Port of f_getspcunitcode lookup tables. */
+export interface FocusUnitMaps {
+  /** SYRSPCUNIT-like: cocode|acctcode → unit | TRAN | ORIG */
+  spcUnit?: Record<string, string>;
+  /** COMAIN: cocode|agtno → origin FO */
+  coMain?: Record<string, string>;
+  /** SYRUNIT: cocode|focode → unit */
+  syrUnit?: Record<string, string>;
+}
+
+/**
+ * Port of f_getspcunitcode(cocode, acctcode, agtno, foUnit, context).
+ * Returns override unit or the FO default.
+ */
+export function resolveFocusUnit(opts: {
+  coCode: string;
+  acctCode: string;
+  agtNo?: string;
+  foUnit: string;
+  maps?: FocusUnitMaps;
+}): string {
+  let unit = (opts.foUnit || "").trim();
+  const spc = opts.maps?.spcUnit?.[`${opts.coCode}|${opts.acctCode}`]?.trim() ?? "";
+  if (spc && spc !== "TRAN" && spc !== "ORIG") return spc;
+  if (spc === "TRAN" && unit) return unit;
+  if (spc === "ORIG" || !unit) {
+    const agt = (opts.agtNo ?? "").trim();
+    if (agt) {
+      const fo = opts.maps?.coMain?.[`${opts.coCode}|${agt}`]?.trim();
+      if (fo) {
+        const u = opts.maps?.syrUnit?.[`${opts.coCode}|${fo}`]?.trim();
+        if (u) return u;
+      }
+    }
+  }
+  return unit;
 }
 
 export interface FocusStageResult {
@@ -315,6 +364,7 @@ function pushMapped(
   partial: Partial<CurrLedgeRow>,
   amount: number,
   ctx: { sourceType: string; userId: string; tranDate: string },
+  unitOpts?: { input: FocusInput; agtNo?: string },
 ): string | null {
   if (!rule) return `No ACCTENT rule for ${partial.tranType ?? partial.acctCode}`;
   const row = applyAcctEnt(partial, rule, amount, {
@@ -323,6 +373,15 @@ function pushMapped(
     tranDate: ctx.tranDate,
   });
   row.numberSign = numberSignFor(row.drCr, row.acctCode);
+  if (unitOpts) {
+    row.unit = resolveFocusUnit({
+      coCode: row.coCode || unitOpts.input.proc.compCode,
+      acctCode: row.acctCode,
+      agtNo: unitOpts.agtNo,
+      foUnit: row.unit || unitOpts.input.params.foUnit || "",
+      maps: unitOpts.input.unitMaps,
+    });
+  }
   out.push(row);
   return null;
 }
@@ -798,6 +857,8 @@ export function processCollection(
     userId: input.userId,
     tranDate: input.proc.dateRec,
   };
+  const agtForOr = (orNo: string): string | undefined =>
+    (input.orItems ?? []).find((r) => r.orNo === orNo && r.agtNo)?.agtNo;
 
   for (const row of input.orCash ?? []) {
     const plan = plans.get(row.orNo);
@@ -822,6 +883,7 @@ export function processCollection(
       },
       row.cashAmt,
       ctx,
+      { input, agtNo: agtForOr(row.orNo) },
     );
     if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
@@ -851,6 +913,7 @@ export function processCollection(
       },
       row.checkAmt,
       ctx,
+      { input, agtNo: agtForOr(row.orNo) },
     );
     if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
@@ -880,6 +943,7 @@ export function processCollection(
       },
       row.orItemAmt,
       ctx,
+      { input, agtNo: row.agtNo },
     );
     if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
     added++;
@@ -919,6 +983,7 @@ export function processCollection(
         },
         leg.amount,
         ctx,
+        { input, agtNo: sample.agtNo },
       );
       if (err) return { stage: "collection", ok: false, detail: err, rowsAdded: added, rejectStatus: "J" };
       added++;
@@ -970,6 +1035,7 @@ export function processCollPdr(input: FocusInput, out: CurrLedgeRow[]): FocusSta
       },
       row.orItemAmt,
       ctx,
+      { input, agtNo: row.agtNo },
     );
     if (err) return { stage: "collPdr", ok: false, detail: err, rowsAdded: added };
     added++;
@@ -992,6 +1058,9 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
     userId: input.userId,
     tranDate: input.proc.dateRec,
   };
+  const agtForDis = (disNo: string): string | undefined =>
+    (input.disItems ?? []).find((r) => r.disNo === disNo && r.agtNo)?.agtNo;
+
   for (const row of input.disCash ?? []) {
     const rule = matchAcctEnt(input.acctEnt, input.proc.compCode, row.acctType, row.payType, {
       srcMap: "DISB",
@@ -1010,6 +1079,7 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
       },
       row.cashAmt,
       ctx,
+      { input, agtNo: agtForDis(row.disNo) },
     );
     if (err) return { stage: "disbursement", ok: false, detail: err, rowsAdded: added };
     added++;
@@ -1037,6 +1107,7 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
       },
       row.checkAmt,
       ctx,
+      { input, agtNo: agtForDis(row.disNo) },
     );
     if (err) return { stage: "disbursement", ok: false, detail: err, rowsAdded: added };
     added++;
@@ -1062,10 +1133,11 @@ export function processDisbursement(input: FocusInput, out: CurrLedgeRow[]): Foc
         itemNo: row.itemNo,
         origCy: row.currency ?? "PHP",
         payType: normalizePayType(row.payType ?? ""),
-        unit: input.params.foUnit ?? "",
+        unit: row.unitCode || input.params.foUnit || "",
       },
       row.disAmt,
       ctx,
+      { input, agtNo: row.agtNo },
     );
     if (err) return { stage: "disbursement", ok: false, detail: err, rowsAdded: added };
     added++;

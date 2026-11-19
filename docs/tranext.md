@@ -54,4 +54,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-Residual FOCUS DataWindow field parity (`dw_dtlcshchk` counters done).
+Unload/FO control polish or CDR depth (FOCUS `agtNo`/`unitCode` + spc unit bridge done).

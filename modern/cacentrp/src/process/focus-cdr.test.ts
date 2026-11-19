@@ -9,6 +9,7 @@ import {
   planOrCollection,
   processDisAddDed,
   processDisbNet,
+  resolveFocusUnit,
   runFocusMapping,
   shouldSkipSpcExcsh,
   type FocusInput,
@@ -1255,6 +1256,114 @@ const STAGE_ORDER =
   check(
     !result.mapFocus.some((r) => r.refNo === "DSBDO001" && r.acctCode === "101001" && r.drCr === "CR"),
     "bank match preferred over plain DISCASH",
+  );
+}
+
+// f_getspcunitcode / agtNo + unitCode field parity
+{
+  check(
+    resolveFocusUnit({
+      coCode: "ALAI",
+      acctCode: "101001",
+      foUnit: "M001",
+      maps: { spcUnit: { "ALAI|101001": "SPC99" } },
+    }) === "SPC99",
+    "spc unit direct override",
+  );
+  check(
+    resolveFocusUnit({
+      coCode: "ALAI",
+      acctCode: "401001",
+      agtNo: "AGT1",
+      foUnit: "M001",
+      maps: {
+        spcUnit: { "ALAI|401001": "ORIG" },
+        coMain: { "ALAI|AGT1": "106" },
+        syrUnit: { "ALAI|106": "U106" },
+      },
+    }) === "U106",
+    "ORIG path via agt → FO → SYRUNIT",
+  );
+
+  const store = createStore();
+  const today = new Date().toISOString().slice(0, 10);
+  store.bdoApMst.push({
+    company: "ALAI",
+    bdoCode: "001",
+    source: "1",
+    processDate: today,
+    status: "Y",
+    subFile: "0806XXX",
+    userId: "DEMO",
+  });
+  const input: FocusInput = {
+    ...demoFocusInput(),
+    unitMaps: {
+      spcUnit: { "ALAI|101001": "SPC01", "ALAI|401001": "ORIG", "ALAI|501001": "DISU1" },
+      coMain: { "ALAI|AGT9": "200" },
+      syrUnit: { "ALAI|200": "U200" },
+    },
+    orCash: [
+      {
+        orNo: "ORUNIT1",
+        orDate: today,
+        currency: "PHP",
+        cashAmt: 100,
+        payType: "CSH",
+        acctType: "ORCASH",
+      },
+    ],
+    orItems: [
+      {
+        orNo: "ORUNIT1",
+        orDate: today,
+        itemNo: 1,
+        payType: "CSH",
+        orItemAmt: 100,
+        acctType: "ORPREM",
+        agtNo: "AGT9",
+      },
+    ],
+    disCash: [],
+    disItems: [
+      {
+        disNo: "DSUNIT1",
+        disDate: today,
+        itemNo: 1,
+        disAmt: 100,
+        acctType: "DISPREM",
+        unitCode: "FROMDTL",
+        agtNo: "AGT9",
+      },
+    ],
+    disCheck: [
+      {
+        disNo: "DSUNIT1",
+        disDate: today,
+        currency: "PHP",
+        checkAmt: 100,
+        payType: "CHK",
+        acctType: "DISCASH",
+        checkNo: "U1",
+        bankCode: "BDO",
+      },
+    ],
+  };
+  // Balance: OR cash 100 + DIS check 100 vs OR prem 100 + DIS prem 100 — wait DIS check CR + DIS prem DR + OR cash DR + OR prem CR
+  // OR: DR 100 CR 100; DIS: CR 100 (bank) DR 100 (prem) → balanced
+  const result = runFocusMapping(store, input);
+  check(result.ok, `unit parity failed: ${result.stages.map((s) => s.detail).join("; ")}`);
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORUNIT1" && r.acctCode === "101001" && r.unit === "SPC01"),
+    "OR cash uses spc unit",
+  );
+  check(
+    result.mapFocus.some((r) => r.refNo === "ORUNIT1" && r.acctCode === "401001" && r.unit === "U200"),
+    "OR prem ORIG unit via agt",
+  );
+  check(
+    result.mapFocus.some((r) => r.refNo === "DSUNIT1" && r.acctCode === "501001" && r.unit === "DISU1"),
+    "DIS prem spc overrides unitCode",
   );
 }
 
