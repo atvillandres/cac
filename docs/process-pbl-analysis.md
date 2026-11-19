@@ -50,7 +50,7 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 
 - Pipeline stage model + CLI (`daily list|run|endofday|focus|cdr|glwalker|lspupload|brs|bpy|grp|inspect`)
 - End-of-day against in-memory ledger store
-- Unload orchestrator (MISCRENM `*.TRN`→`*.DBF`, inbound DBF ImportFile + `dtltype`, FO_TCDBF gate, mapDownstream → FOCUS/CDR/BPY/GRP) — see [`docs/unload.md`](unload.md)
+- Unload orchestrator (MISCRENM, inbound DBF ImportFile, BDOXPMST resolve, `wf_sendmail` XT7 feedback, FO_TCDBF gate, mapDownstream → FOCUS/CDR/BPY/GRP) — see [`docs/unload.md`](unload.md)
 - FOCUS / CDR → `CURRLEDGE` mapping (PDR / add-ded / `wf_spcexcsh` / fund transfer / net DIS / UNBALDOC / ERRCASHBAL / OR check-path + param 105 / ORSHORTOVER / USD `CSHD`/`CHKD` + DIS bank join / `dw_dtlcshchk` / `f_getspcunitcode` + agtNo/unitCode / `wf_processreject` `*U` / `wf_processcomplete` `*X` / param 106; CDR `CACPAR01` / unitMaps / fail→`unbalCurrLedge`; unload FO_TCDBF Σ control gate) — see [`docs/focus-cdr-mapping.md`](focus-cdr-mapping.md)
 - GL Walker NLSP + LSP `GLWDTL` → fixed-width `.GLW` (H/A/P) — see [`docs/glwalker.md`](glwalker.md)
 - LSP upload → `UN_mmdd.lsp` + `INTINPFL` — see [`docs/lsp-upload.md`](lsp-upload.md)
@@ -60,4 +60,4 @@ Confirmed GL Walker already run → `INSERT INTO CURRLEDGEX SELECT * FROM CURRLE
 - TRANEXT DBF ImportFile + typed CS/DA/RA–RF/VA–VH/RC1/VI/HA/OA/OB + APTRANS/APDEP — see [`docs/tranext.md`](tranext.md)
 - Object inventory (166 source objects)
 
-Next slice: richer `wf_procmail` / `wf_sendmail` (MAPI attach-to-disk, BDOXPMST, feedback). SYRADJPARM adj loop remains a legacy no-op.
+Next slice: MAPI attach-to-disk / DELFLECF / ARJ extract bats, or `focusWorkingFromStore` VD/VE→disAddDed. SYRADJPARM remains a legacy no-op.

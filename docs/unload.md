@@ -34,6 +34,14 @@ Legacy bat: `modern/cacentrp/legacy-source/dosbat/MISCRENM.BAT`.
 
 See [`docs/tranext.md`](tranext.md).
 
+## Mail / sendmail (ported)
+
+| Piece | Behavior |
+|-------|----------|
+| BDOXPMST | `store.bdoXpMst` — resolve sender email → `sntComp`/`sntBdo` (strict when table non-empty) |
+| No-attach | Status `C` / `*`; letter-month `subFile` (`yy`+A–L+`dd`+bdo) |
+| `wf_sendmail` | `runSendmail` — distinct today's BDOAPMST → HTML feedback (optional `outDir`) → recipient from XP; **send iff XT7=Y** (log-only transport) |
+
 ## Still pending
 
-Richer `wf_procmail` / `wf_sendmail` (MAPI save, BDOXPMST, feedback HTML).
+MAPI attach-to-disk, DELFLECF, ARJ extract bats (`FOCUSXTR` / `APCDRXTR`), full `BDOAPDTL` error HTML grid.
