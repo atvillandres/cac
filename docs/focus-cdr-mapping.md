@@ -52,4 +52,4 @@ Paytype normalize: `CHK→Q`, `CSH→C`.
 
 ## Still pending
 
-SYRADJPARM adj loop is empty in extracted PB source (no-op) — not scheduled as a behavior port. FOCUS + CDR core mapping depth is otherwise complete for this modernization track.
+SYRADJPARM adj loop is empty in extracted PB source (no-op) — not a behavior port. FOCUS + CDR + TRANEXT add/ded bridge are complete for this modernization track.

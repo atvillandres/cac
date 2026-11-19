@@ -33,6 +33,7 @@ import type {
 } from "./store.js";
 import type {
   DepositRow,
+  DisAddDedLine,
   DisCashRow,
   DisItemRow,
   FocusInput,
@@ -1242,13 +1243,43 @@ export function write2TranextCode(
   }
 }
 
+function disPayMode(
+  store: DailyStore,
+  disNo: string,
+  disDate: string,
+): "CSH" | "CHK" {
+  if (
+    store.disCheckCurr.some(
+      (r) => r.disNo === disNo && r.disDate === disDate && (r.checkAmt ?? 0) !== 0,
+    )
+  ) {
+    return "CHK";
+  }
+  return "CSH";
+}
+
+function disCurrency(store: DailyStore, disNo: string, disDate: string): string {
+  const cash = store.disCashCurr.find((r) => r.disNo === disNo && r.disDate === disDate);
+  if (cash?.currency) return cash.currency;
+  const chk = store.disCheckCurr.find((r) => r.disNo === disNo && r.disDate === disDate);
+  if (chk?.currency) return chk.currency;
+  return "PHP";
+}
+
 /**
- * Build FOCUS working sets from typed TRANEXT tables (RC/RD/RE/VC/VF/DA).
- * PAYTYPE / DISTYPE become ACCTENT.TRANTYPE keys.
+ * Build FOCUS working sets from typed TRANEXT tables (RC/RD/RE/VC/VF/VD/VE/DA).
+ * PAYTYPE / DISTYPE become ACCTENT.TRANTYPE keys; VD/VE → disAddDedLines.
  */
 export function focusWorkingFromStore(store: DailyStore): Pick<
   FocusInput,
-  "orCash" | "orCheck" | "orItems" | "disCash" | "disCheck" | "disItems" | "deposits"
+  | "orCash"
+  | "orCheck"
+  | "orItems"
+  | "disCash"
+  | "disCheck"
+  | "disItems"
+  | "disAddDedLines"
+  | "deposits"
 > {
   // dw_maporcheckcurr / cash / items join ORMAINCURR with ORSTATCODE <> 'C'
   const cancelled = new Set(
@@ -1358,7 +1389,43 @@ export function focusWorkingFromStore(store: DailyStore): Pick<
     bankAcct: r.acctCode || r.bankAcctNo,
     currency: r.currency,
   }));
-  return { orCash, orCheck, orItems, disCash, disCheck, disItems, deposits };
+  // VD/VE → DIS add/ded (legacy DISADDAMT / DISDEDAMT → mapfocus add/ded stage)
+  const disAddDedLines: DisAddDedLine[] = [
+    ...store.disAddCurr.map((r) => ({
+      disNo: r.disNo,
+      disDate: r.disDate,
+      currency: disCurrency(store, r.disNo, r.disDate),
+      payMode: disPayMode(store, r.disNo, r.disDate),
+      kind: "ADD" as const,
+      acctCode: r.addCode,
+      drCr: "CR" as const,
+      amount: r.disAddAmt,
+      itemNo: r.itemNo,
+      payType: r.disType || undefined,
+    })),
+    ...store.disDedCurr.map((r) => ({
+      disNo: r.disNo,
+      disDate: r.disDate,
+      currency: disCurrency(store, r.disNo, r.disDate),
+      payMode: disPayMode(store, r.disNo, r.disDate),
+      kind: "DED" as const,
+      acctCode: r.dedCode,
+      drCr: "DR" as const,
+      amount: r.disDedAmt,
+      itemNo: r.itemNo,
+      payType: r.disType || undefined,
+    })),
+  ];
+  return {
+    orCash,
+    orCheck,
+    orItems,
+    disCash,
+    disCheck,
+    disItems,
+    disAddDedLines,
+    deposits,
+  };
 }
 
 export interface TranextLoadInput {

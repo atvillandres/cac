@@ -33,7 +33,7 @@ then calls `wf_write2{code}` to load repository / working tables (ORMAINCURR, CA
 | OA | Life amendment | `lAmend` |
 | OB | Application no history | `lApplNoHist` |
 
-`focusWorkingFromStore` projects RC/RD/RE/VC/VF/DA into FOCUS `orCash` / `orItems` / `disCash` / `disItems` / `deposits`.
+`focusWorkingFromStore` projects RC/RD/RE/VC/VF/**VD/VE**/DA into FOCUS `orCash` / `orItems` / `disCash` / `disItems` / **`disAddDedLines`** / `deposits`.
 
 ### CDR pack (`APTRANS.DBF` / `APDEP.DBF`)
 
@@ -58,4 +58,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-MAPI/ARJ unload attach path; `focusWorkingFromStore` VD/VE→disAddDed. SYRADJPARM adj loop is empty in extracted PB (no-op).
+Live MAPI session / HOTCI.EXE (external). SYRADJPARM adj loop is empty in extracted PB (no-op).

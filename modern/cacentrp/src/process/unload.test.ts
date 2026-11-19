@@ -1,12 +1,14 @@
 /**
  *   npx tsx src/process/unload.test.ts
  */
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runArjExtract } from "./arjextract.js";
 import { demoBpyRows } from "./bpy.js";
 import { writeDbfFile } from "./dbf.js";
+import { deleteOldFocusCdrFiles } from "./delflecf.js";
 import { DEMO_BDOXPMST } from "./fixtures.js";
 import { demoGrpRows } from "./grp.js";
 import { renameTrnToDbf } from "./miscrenm.js";
@@ -18,7 +20,6 @@ import {
 import { createStore } from "./store.js";
 import { validateFoControl } from "./tranext.js";
 import { detectInboundKind, mapMiscFileRow, runUnload } from "./unload.js";
-import { readFileSync } from "node:fs";
 
 function check(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -350,6 +351,80 @@ check(result.logs.some((l) => l.step === "miscrenm" && l.detail.includes("skip")
   check(blocked.plans.length === 1, "one trio");
   check(!blocked.plans[0]!.sent, "XT7 N blocks send");
   check(blocked.plans[0]!.statusLines.length === 1, "excludes *");
+}
+
+// DELFLECF + ARJ plan + ERR.HTM
+{
+  const temp = mkdtempSync(join(tmpdir(), "delflecf-"));
+  const out = mkdtempSync(join(tmpdir(), "errhtm-"));
+  try {
+    writeFileSync(join(temp, "old.FCS"), "x");
+    writeFileSync(join(temp, "old.CDR"), "y");
+    writeFileSync(join(temp, "keep.txt"), "z");
+    const del = deleteOldFocusCdrFiles(temp);
+    check(del.ok && del.deleted.length === 2, `delflecf ${del.detail}`);
+    check(existsSync(join(temp, "keep.txt")), "keep non-match");
+    check(!existsSync(join(temp, "old.FCS")), "FCS deleted");
+
+    const arch = join(temp, "pack.arj");
+    writeFileSync(arch, "not-a-real-arj");
+    const plan = runArjExtract({
+      tranextDir: temp,
+      archivePath: arch,
+      kind: "FOCUSXTR",
+      dryRun: true,
+    });
+    check(plan.ok && !plan.extracted && plan.detail.includes("would ARJ"), plan.detail);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const s = createStore({
+      bdoXpMst: DEMO_BDOXPMST,
+      bdoErrRef: [{ errCode: "A021003", errProc: "Duplicate", errDesc: "Duplicate File Name Found" }],
+      bdoError: [
+        {
+          company: "ALAI",
+          bdoCode: "080",
+          source: "1",
+          processDate: today,
+          errCode: "A021003",
+          docNum: "0806XXX",
+          xFiles: "0806XXX.FCS",
+        },
+      ],
+      bdoApMst: [
+        {
+          company: "ALAI",
+          bdoCode: "080",
+          source: "1",
+          processDate: today,
+          status: "Y",
+          subFile: "0806XXX",
+          userId: "DEMO",
+        },
+      ],
+    });
+    const mail = runSendmail(s, {
+      processDate: today,
+      xt7ByCompany: { ALAI: "Y" },
+      outDir: out,
+    });
+    const errPath = mail.plans[0]?.errorHtmlPath;
+    check(!!errPath && existsSync(errPath), "ERR.HTM written");
+    check(readFileSync(errPath!, "utf8").includes("Duplicate File Name Found"), "ERR desc");
+
+    const r = runUnload(createStore(), {
+      userId: "DEMO",
+      messages: [],
+      inbound: [],
+      cleanupTempDir: temp,
+      mapDownstream: false,
+      sendFeedback: false,
+    });
+    check(r.logs.some((l) => l.step === "delflecf" && l.ok), "unload delflecf log");
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true });
+  }
 }
 
 console.log("unload.test.ts: OK");

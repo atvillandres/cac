@@ -4,6 +4,7 @@
  */
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { deleteOldFocusCdrFiles } from "../process/delflecf.js";
 import type { AppContext } from "../types.js";
 
 export const APP_META = {
@@ -16,7 +17,12 @@ export const APP_META = {
 
 export async function onApplicationOpen(
   ctx: AppContext,
-  options: { cleanupScript?: string; skipCleanup?: boolean } = {},
+  options: {
+    cleanupScript?: string;
+    /** Preferred: delete *.FC?/*.CDR in this dir (port of DELFLECF.BAT body). */
+    cleanupTempDir?: string;
+    skipCleanup?: boolean;
+  } = {},
 ): Promise<void> {
   console.log(`[${APP_META.displayName}] open`);
   console.log(`  variant   : ${ctx.variant}`);
@@ -25,9 +31,16 @@ export async function onApplicationOpen(
 
   if (options.skipCleanup) return;
 
+  if (options.cleanupTempDir) {
+    const r = deleteOldFocusCdrFiles(options.cleanupTempDir);
+    if (r.ok) console.log(`  cleanup  : ${r.detail}`);
+    else console.warn(`Warning!!! Couldn't Delete Old CDR/FCS Files (${r.detail})`);
+    return;
+  }
+
   const script = options.cleanupScript;
   if (!script) {
-    console.log("  cleanup  : skipped (no DELFLECF.BAT path configured)");
+    console.log("  cleanup  : skipped (no DELFLECF.BAT path / cleanupTempDir configured)");
     return;
   }
   if (!existsSync(script)) {

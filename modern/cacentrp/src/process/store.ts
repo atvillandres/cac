@@ -31,6 +31,26 @@ export interface BdoXpMstRow {
   unitTag?: string;
 }
 
+/** Port of BDOERROR — unload / map error rows for feedback ERR.HTM. */
+export interface BdoErrorRow {
+  company: string;
+  bdoCode: string;
+  source: string;
+  processDate: string;
+  errCode: string;
+  docType?: string;
+  docNum?: string;
+  xFiles?: string;
+  nFiles?: number;
+}
+
+/** Port of BDOERRREF — error code → procedure / description. */
+export interface BdoErrRefRow {
+  errCode: string;
+  errProc: string;
+  errDesc: string;
+}
+
 /** Port of UNBALDOC (f_write2unbaldoc) — per-document DR/CR mismatch. */
 export interface UnbalDocRow {
   compCode: string;
@@ -657,6 +677,10 @@ export interface DailyStore {
   bdoApMst: BdoApMstRow[];
   /** BDOXPMST — sender/recipient email directory */
   bdoXpMst: BdoXpMstRow[];
+  /** BDOERROR — FO feedback error grid */
+  bdoError: BdoErrorRow[];
+  /** BDOERRREF — error code descriptions */
+  bdoErrRef: BdoErrRefRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
   grpFile: GrpFileRow[];
@@ -709,6 +733,8 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     orShortOver: seed?.orShortOver ? [...seed.orShortOver] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
     bdoXpMst: seed?.bdoXpMst ? [...seed.bdoXpMst] : [],
+    bdoError: seed?.bdoError ? [...seed.bdoError] : [],
+    bdoErrRef: seed?.bdoErrRef ? [...seed.bdoErrRef] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
     grpFile: seed?.grpFile ? [...seed.grpFile] : [],
