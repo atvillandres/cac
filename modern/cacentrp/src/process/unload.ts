@@ -21,6 +21,7 @@ import {
   FOCUS_TRANEXT_FILES,
   focusWorkingFromStore,
   runTranextLoad,
+  validateFoControl,
   type TranextCode,
   type TranextLoadResult,
 } from "./tranext.js";
@@ -94,6 +95,8 @@ export interface UnloadResult {
   tranextPlan: TranextCode[];
   /** Result of runTranextLoad when tranextDir was supplied */
   tranextLoad?: TranextLoadResult;
+  /** False when FO_TCDBF control fails after TRANEXT load */
+  foControlOk?: boolean;
 }
 
 /** FOCUS extract typically drives these writers after wf_procfocusfiles. */
@@ -173,6 +176,7 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   const mapDown = input.mapDownstream ?? false;
   const mapped = { focusRows: 0, cdrRows: 0, bpyRows: 0, grpRows: 0 };
   const tranextPlan = new Set<TranextCode>();
+  let foControlOk: boolean | undefined;
 
   logs.push({
     step: "miscrenm",
@@ -344,11 +348,18 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
       detail: tranextLoad.detail,
       ok: tranextLoad.ok,
     });
+    const foCtrl = validateFoControl(store, tranextLoad.results);
+    logs.push({
+      step: "fo-control",
+      detail: foCtrl.detail,
+      ok: foCtrl.ok,
+    });
+    foControlOk = foCtrl.ok;
   }
 
   if (mapDown) {
-    // FOCUS — one demo/map call per job (payload tables not yet parsed from FCS)
-    for (const job of focusJobs) {
+    // FOCUS — gated when FO_TCDBF extract control mismatches pack members
+    for (const job of foControlOk === false ? [] : focusJobs) {
       const base = input.focusInput ?? demoFocusInput(input.userId);
       const fromTx = input.focusFromTranext ? focusWorkingFromStore(store) : null;
       const focusIn: FocusInput = {
@@ -365,8 +376,10 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
         ...(fromTx
           ? {
               orCash: fromTx.orCash,
+              orCheck: fromTx.orCheck,
               orItems: fromTx.orItems,
               disCash: fromTx.disCash,
+              disCheck: fromTx.disCheck,
               disItems: fromTx.disItems,
               deposits: fromTx.deposits,
             }
@@ -472,5 +485,6 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     mapped,
     tranextPlan: [...tranextPlan],
     tranextLoad,
+    foControlOk,
   };
 }

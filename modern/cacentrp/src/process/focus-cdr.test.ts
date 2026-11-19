@@ -1390,6 +1390,72 @@ const STAGE_ORDER =
   check(store.currLedge.length === result.rows.length, "cdr currledge");
   check(store.apTransX.length === 2, "APTRANS archived");
   check(store.bdoApMst[0].status === "L", "CDR BDOAPMST L");
+  check(
+    result.rows.some((r) => r.tranType === "CACPAR01" && r.acctCode === "214000"),
+    "CDR auto-balance via CACPAR01",
+  );
+  check(
+    result.rows.every((r) => r.numberSign === numberSignFor(r.drCr, r.acctCode)),
+    "CDR numberSign parity",
+  );
+}
+
+// CDR unitMaps + agtNo (f_getspcunitcode ORIG)
+{
+  const store = createStore();
+  const input = demoCdrInput();
+  input.apTrans = [
+    {
+      docNum: "APU001",
+      docDate: "2026-11-13",
+      acctType: "CASH",
+      amount: 100,
+      payType: "CSH",
+      agtNo: "A9",
+    },
+    {
+      docNum: "APU001",
+      docDate: "2026-11-13",
+      acctType: "PREM",
+      amount: 100,
+    },
+  ];
+  input.apDeposits = [];
+  input.unitMaps = {
+    spcUnit: { "AP|101001": "ORIG" },
+    coMain: { "AP|A9": "080" },
+    syrUnit: { "AP|080": "U999" },
+  };
+  const result = runCdrMapping(store, input);
+  check(result.ok, `cdr unit failed: ${result.detail}`);
+  const cash = result.rows.find((r) => r.refNo === "APU001" && r.acctCode === "101001");
+  check(cash?.unit === "U999", `expected U999 got ${cash?.unit}`);
+}
+
+// CDR strict imbalance → unbalCurrLedge + BDO J
+{
+  const store = createStore();
+  store.bdoApMst.push({
+    company: "AP",
+    bdoCode: "080",
+    source: "2",
+    processDate: new Date().toISOString().slice(0, 10),
+    status: "Y",
+    subFile: "0806YYY",
+    userId: "DEMO",
+  });
+  const input = demoCdrInput();
+  input.autoBalanceExcessCash = false;
+  input.apDeposits = []; // leaves CASH DR + PREM CR balanced actually — force imbalance
+  input.apTrans = [
+    { docNum: "APX", docDate: "2026-11-13", acctType: "CASH", amount: 500, payType: "CSH" },
+  ];
+  const result = runCdrMapping(store, input);
+  check(!result.ok, "strict CDR should fail imbalance");
+  check(result.batchFile === "Error.bat", "CDR Error.bat");
+  check(store.unbalCurrLedge.length > 0, "CDR → unbalCurrLedge");
+  check(store.bdoApMst[0]!.status === "J", "CDR BDO J on fail");
+  check(store.currLedge.length === 0, "strict fail does not write CURRLEDGE");
 }
 
 console.log("focus-cdr.test.ts: OK");

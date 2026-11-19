@@ -339,6 +339,55 @@ function write2FoControl(
   };
 }
 
+export interface FoControlValidation {
+  ok: boolean;
+  detail: string;
+  /** Pack member codes present in the load result (excluding FO_TCDBF). */
+  packCodes: string[];
+  expectedCount?: number;
+  actualCount: number;
+}
+
+/**
+ * Polish FO_TCDBF after TRANEXT load: ΣTC_COUNT across control rows must equal
+ * Σwritten across pack members (excluding FO_TCDBF). Each control row is a pack
+ * file manifest entry; TC_COUNT is that file's record count.
+ */
+export function validateFoControl(
+  store: DailyStore,
+  loadResults: Write2Result[],
+): FoControlValidation {
+  const packResults = loadResults.filter((r) => r.code !== "FO_TCDBF");
+  const packCodes = packResults.filter((r) => r.written > 0).map((r) => r.code);
+  const actualCount = packResults.reduce((s, r) => s + r.written, 0);
+  if (!store.foControl.length) {
+    return {
+      ok: true,
+      detail: "No FO_TCDBF row; skip control check",
+      packCodes,
+      actualCount,
+    };
+  }
+  const expected = store.foControl.reduce((s, r) => s + (r.tcCount || 0), 0);
+  const hashSum = store.foControl.reduce((s, r) => s + (r.tcHash || 0), 0);
+  if (expected !== actualCount) {
+    return {
+      ok: false,
+      detail: `FO_TCDBF ΣTC_COUNT=${expected} but loaded Σwritten=${actualCount} (${packCodes.join(",") || "none"})`,
+      packCodes,
+      expectedCount: expected,
+      actualCount,
+    };
+  }
+  return {
+    ok: true,
+    detail: `FO_TCDBF OK (ΣTC_COUNT=${expected}, nonEmptyPacks=${packCodes.length}, Σhash=${hashSum})`,
+    packCodes,
+    expectedCount: expected,
+    actualCount,
+  };
+}
+
 function todayOf(ctx: Write2Context): string {
   return ctx.processDate ?? new Date().toISOString().slice(0, 10);
 }

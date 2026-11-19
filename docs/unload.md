@@ -24,6 +24,8 @@ Manual Loading (`w_user_unload`) shares the same writers without MAPI.
 | `mapDownstream` | Calls ported FOCUS/CDR/BPY/GRP mappers |
 | TRANEXT plan | Lists planned `wf_write2*` codes |
 | `tranextDir` | ImportFile + `wf_write2*` via `runTranextLoad` (CS/DA/RA–RF/VA–VH typed) |
+| FO control | After TRANEXT load, `validateFoControl` checks `ΣFO_TCDBF.TC_COUNT` vs `Σwritten`; mismatch gates FOCUS mapping only (`foControlOk=false`) |
+| FOCUS from TRANEXT | `focusFromTranext` feeds `orCheck` / `disCheck` (and related) from typed working tables |
 
 CLI: `cacentrp daily run --map` (default on) / `daily unload [--tranext dir]` / `daily tranext`
 
