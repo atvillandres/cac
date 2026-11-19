@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadIni, summarizeIni } from "./config/ini.js";
 import { describeManifest, detectVariant, loadManifest } from "./exe/manifest.js";
-import { MockDbAdapter } from "./db/adapter.js";
+import { createDbAdapter, parseDbMode, type DbMode } from "./db/create-adapter.js";
 import { onApplicationOpen, APP_META } from "./app/cac.js";
 import { login } from "./app/login.js";
 import { renderFrame } from "./app/frame.js";
@@ -70,6 +70,7 @@ function usage(): never {
 
 Login options:
   --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
+  --db mock|odbc          Database mode (default: mock; or env CAC_DB=odbc)
   --ini <path>            Path to cac.ini / alaicac.ini
   --exe <path>            Optional legacy cacentrp.exe to scrape library list
   --user <id>             Non-interactive login user
@@ -96,6 +97,7 @@ Daily options:
 function parseLoginArgs(argv: string[]) {
   const opts: {
     variant?: Variant;
+    db?: DbMode;
     ini?: string;
     exe?: string;
     user?: string;
@@ -109,6 +111,7 @@ function parseLoginArgs(argv: string[]) {
     if (a === "--inspect") opts.inspect = true;
     else if (a === "--skip-cleanup") opts.skipCleanup = true;
     else if (a === "--variant") opts.variant = detectVariant(argv[++i]);
+    else if (a === "--db") opts.db = parseDbMode(argv[++i]);
     else if (a === "--ini") opts.ini = argv[++i];
     else if (a === "--exe") opts.exe = argv[++i];
     else if (a === "--user") opts.user = argv[++i];
@@ -209,13 +212,24 @@ async function runLoginShell(argv: string[]) {
       ? { userId: opts.user, password: opts.password ?? "" }
       : await promptLogin();
 
-  const db = new MockDbAdapter();
-  const result = await login(ctx, db, creds);
-  ctx.session = result.session;
+  const dbMode = opts.db ?? parseDbMode();
+  console.log(`Database mode: ${dbMode}${dbMode === "mock" ? " (set --db odbc or CAC_DB=odbc for AS400)" : ""}`);
+  const db = createDbAdapter(dbMode);
+  try {
+    const result = await login(ctx, db, creds);
+    ctx.session = result.session;
 
-  console.log("\nOpening CAC Enterprise...\n");
-  console.log(renderFrame(result.session));
-  console.log("\nDaily processing: cacentrp daily list | run | endofday | inspect");
+    console.log("\nOpening CAC Enterprise...\n");
+    console.log(renderFrame(result.session));
+    console.log("\nDaily processing: cacentrp daily list | run | endofday | inspect");
+    if (dbMode === "odbc") {
+      console.log(
+        "Note: daily CURRLEDGE pipeline is still in-process memory; ODBC is used for login/SYRUSERID.",
+      );
+    }
+  } finally {
+    await db.disconnectAll?.();
+  }
 }
 
 function runDailyCommand(argv: string[]) {

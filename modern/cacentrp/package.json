@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/process/endofday.test.ts && tsx src/process/focus-cdr.test.ts && tsx src/process/glwalker.test.ts && tsx src/process/lspupload.test.ts && tsx src/process/brs.test.ts && tsx src/process/bpy.test.ts && tsx src/process/grp.test.ts && tsx src/process/unload.test.ts && tsx src/process/tranext.test.ts && tsx src/process/aptrans.test.ts && tsx src/process/tranext-misc.test.ts",
+    "test": "tsx src/db/connect-string.test.ts && tsx src/process/endofday.test.ts && tsx src/process/focus-cdr.test.ts && tsx src/process/glwalker.test.ts && tsx src/process/lspupload.test.ts && tsx src/process/brs.test.ts && tsx src/process/bpy.test.ts && tsx src/process/grp.test.ts && tsx src/process/unload.test.ts && tsx src/process/tranext.test.ts && tsx src/process/aptrans.test.ts && tsx src/process/tranext-misc.test.ts",
     "daily": "tsx src/index.ts daily"
   },
   "engines": {
@@ -22,5 +22,8 @@
     "@types/node": "^22.13.10",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "odbc": "^2.4.9"
   }
 }

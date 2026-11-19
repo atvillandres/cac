@@ -1,7 +1,8 @@
 /**
  * Database adapter boundary.
  * Legacy PowerBuilder used ODBC DSNs (ALAICAC, ALMODDATA, GISDATA / APMODDTA, CACDB, RAWDATA).
- * Default implementation is an in-memory mock so the modern shell can run without ASA/ODBC.
+ * Use createDbAdapter("odbc") / --db odbc for real AS400 login; mock remains the default for CI.
+ * See docs/deploy-odbc.md.
  */
 export interface ConnectParams {
   profileName: string;
@@ -16,6 +17,7 @@ export interface DbAdapter {
   connect(params: ConnectParams): Promise<void>;
   disconnect(profileName: string): Promise<void>;
   validateUser(userId: string, password: string): Promise<boolean>;
+  disconnectAll?(): Promise<void>;
 }
 
 export class MockDbAdapter implements DbAdapter {

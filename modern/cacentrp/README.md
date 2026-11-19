@@ -12,6 +12,15 @@ node dist/index.js --inspect
 node dist/index.js --variant ALAI --user DEMO --password demo --skip-cleanup
 ```
 
+**Real AS400 login** (ODBC DSNs required — see [`docs/deploy-odbc.md`](../../docs/deploy-odbc.md)):
+
+```bash
+node dist/index.js --variant AP --db odbc --ini config/cac.ini --user YOURUSER --password YOURPASS
+# or: CAC_DB=odbc
+```
+
+Default `--db mock` needs no ODBC (CI / offline). Daily CURRLEDGE is still in-memory even with `--db odbc`.
+
 Or without build:
 
 ```bash
@@ -46,7 +55,7 @@ See [`docs/process-pbl-analysis.md`](../../docs/process-pbl-analysis.md), [`docs
 - `src/app/*` — ports of recovered shell PowerScript  
 - `src/process/*` — daily pipeline (unload, FOCUS/CDR, BPY, SSI/GRP, BRS, LSP, GL Walker, end-of-day)  
 - `legacy-source/` — recovered PowerScript (`cac.pbl` + key `process.pbl` objects)  
-- `src/db/adapter.ts` — mock DB (wire real ODBC/Postgres later)
+- `src/db/` — `mock` + `odbc` adapters (`--db odbc` / `CAC_DB=odbc`)
 
 ## Extract more legacy source
 
