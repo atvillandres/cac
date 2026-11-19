@@ -17,8 +17,8 @@ export interface LoginResult {
 
 function requiredProfiles(variant: Variant): string[] {
   if (variant === "ALAI") return ["ALAICAC", "ALMODDATA", "GISDATA"];
-  // AP / PBL builds used APMODDTA + related CACDB profiles via cac.ini
-  return ["APMODDTA", "CACDB", "RAWDATA"];
+  // AP / PBL: CACDB first (SYRUSERID / SQLCA-equivalent), then source + extract
+  return ["CACDB", "APMODDTA", "RAWDATA"];
 }
 
 function profileLookupKeys(name: string): string[] {
