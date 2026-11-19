@@ -15,6 +15,20 @@ export interface BdoApMstRow {
   status: string;
   subFile: string;
   userId: string;
+  /** BDOSNTCOMP — sender company from BDOXPMST */
+  sntComp?: string;
+  /** BDOSNTBDO — sender BDO from BDOXPMST */
+  sntBdo?: string;
+}
+
+/** Port of BDOXPMST — FO email / company / BDO directory for mail resolve. */
+export interface BdoXpMstRow {
+  email: string;
+  company: string;
+  bdoCode: string;
+  /** appsrce 1=FOCUS 2=CDR (optional filter for recipient lookup) */
+  source?: string;
+  unitTag?: string;
 }
 
 /** Port of UNBALDOC (f_write2unbaldoc) — per-document DR/CR mismatch. */
@@ -641,6 +655,8 @@ export interface DailyStore {
   /** ORSHORTOVER — within-tol paid vs item adjustment audit. */
   orShortOver: OrShortOverRow[];
   bdoApMst: BdoApMstRow[];
+  /** BDOXPMST — sender/recipient email directory */
+  bdoXpMst: BdoXpMstRow[];
   bpyFile: BpyFileRow[];
   bpyFileX: BpyFileRow[];
   grpFile: GrpFileRow[];
@@ -692,6 +708,7 @@ export function createStore(seed?: Partial<DailyStore>): DailyStore {
     orShrtExeFail: seed?.orShrtExeFail ? [...seed.orShrtExeFail] : [],
     orShortOver: seed?.orShortOver ? [...seed.orShortOver] : [],
     bdoApMst: seed?.bdoApMst ? [...seed.bdoApMst] : [],
+    bdoXpMst: seed?.bdoXpMst ? [...seed.bdoXpMst] : [],
     bpyFile: seed?.bpyFile ? [...seed.bpyFile] : [],
     bpyFileX: seed?.bpyFileX ? [...seed.bpyFileX] : [],
     grpFile: seed?.grpFile ? [...seed.grpFile] : [],

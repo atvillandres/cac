@@ -7,11 +7,18 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { demoBpyRows } from "./bpy.js";
 import { writeDbfFile } from "./dbf.js";
+import { DEMO_BDOXPMST } from "./fixtures.js";
 import { demoGrpRows } from "./grp.js";
 import { renameTrnToDbf } from "./miscrenm.js";
+import {
+  feedbackFormName,
+  letterMonth,
+  runSendmail,
+} from "./sendmail.js";
 import { createStore } from "./store.js";
 import { validateFoControl } from "./tranext.js";
 import { detectInboundKind, mapMiscFileRow, runUnload } from "./unload.js";
+import { readFileSync } from "node:fs";
 
 function check(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -249,6 +256,100 @@ check(result.logs.some((l) => l.step === "miscrenm" && l.detail.includes("skip")
 {
   const ren = renameTrnToDbf("/tmp/does-not-exist-miscrenm-xyz");
   check(ren.ok && ren.renames.length === 0, "missing dir skip");
+}
+
+// BDOXPMST resolve + wf_sendmail XT7 gate
+{
+  check(letterMonth("2026-11-19") === "K", "letter Nov=K");
+  const form = feedbackFormName("2026-11-19");
+  check(form === "26K19", `form ${form}`);
+
+  const s = createStore({ bdoXpMst: DEMO_BDOXPMST });
+  const out = mkdtempSync(join(tmpdir(), "sendmail-"));
+  try {
+    const r = runUnload(s, {
+      userId: "DEMO",
+      mapDownstream: false,
+      sendFeedback: true,
+      sendmail: {
+        subjectR01: "CAC FO Feedback",
+        xt7ByCompany: { ALAI: "Y", AP: "N" },
+        outDir: out,
+      },
+      messages: [
+        {
+          id: "ok",
+          subject: "CAC-LSP File 0806",
+          senderEmail: "fo@example.com",
+          dateReceived: "2026-11-13",
+          attachments: [{ filename: "0806XXX.FCS", pathname: "C:\\IN\\0806XXX.FCS" }],
+        },
+        {
+          id: "unknown",
+          subject: "CAC-LSP File 0806",
+          senderEmail: "stranger@example.com",
+          dateReceived: "2026-11-13",
+          attachments: [{ filename: "0806ZZZ.FCS", pathname: "C:\\IN\\0806ZZZ.FCS" }],
+        },
+        {
+          id: "noatt",
+          subject: "NO CAC-LSP File 11/13/2026",
+          senderEmail: "fo@example.com",
+          dateReceived: "2026-11-13",
+          attachments: [],
+        },
+      ],
+      inbound: [],
+    });
+    check(r.logs.some((l) => l.step === "mail-xp-skip"), "unknown email skipped");
+    check(r.focusFiles === 1, "only known sender FOCUS");
+    const noAtt = s.bdoApMst.find((b) => b.status === "*");
+    check(!!noAtt && noAtt.company === "ALAI" && noAtt.bdoCode === "080", "no-att from XP");
+    check(!!noAtt?.sntComp && noAtt.sntBdo === "080", "sntComp/sntBdo set");
+    check(
+      !!(r.sendmail && r.sendmail.plans.some((p) => p.sent && p.recipient === "fo@example.com")),
+      "XT7 send planned",
+    );
+    const htm = r.sendmail?.plans.find((p) => p.htmlPath)?.htmlPath;
+    check(!!htm && readFileSync(htm, "utf8").includes("CAC FO Feedback"), "HTML written");
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+}
+
+// runSendmail excludes status=* and respects XT7≠Y
+{
+  const today = new Date().toISOString().slice(0, 10);
+  const s = createStore({
+    bdoXpMst: DEMO_BDOXPMST,
+    bdoApMst: [
+      {
+        company: "ALAI",
+        bdoCode: "080",
+        source: "1",
+        processDate: today,
+        status: "*",
+        subFile: "X",
+        userId: "DEMO",
+      },
+      {
+        company: "ALAI",
+        bdoCode: "080",
+        source: "1",
+        processDate: today,
+        status: "L",
+        subFile: "0806XXX",
+        userId: "DEMO",
+      },
+    ],
+  });
+  const blocked = runSendmail(s, {
+    processDate: today,
+    xt7ByCompany: { ALAI: "N" },
+  });
+  check(blocked.plans.length === 1, "one trio");
+  check(!blocked.plans[0]!.sent, "XT7 N blocks send");
+  check(blocked.plans[0]!.statusLines.length === 1, "excludes *");
 }
 
 console.log("unload.test.ts: OK");

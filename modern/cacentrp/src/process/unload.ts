@@ -3,9 +3,10 @@
  *
  * Control flow:
  *   1. MISCRENM — rename inbound *.TRN → *.DBF (optional inboundDir)
- *   2. Mail subjects CAC-LSP File / NO CAC-LSP File → FOCUS/CDR attachments
+ *   2. Mail subjects CAC-LSP File / NO CAC-LSP File → FOCUS/CDR (BDOXPMST resolve)
  *   3. Inbound *.dbf → BPYFILE (BRS) / GRPFILE (SSI); ImportFile when rows omitted
  *   4. Optional mapDownstream → call ported FOCUS/CDR/BPY/GRP mappers
+ *   5. wf_sendmail — feedback HTML + XT7 gate (log-only transport)
  *
  * TRANEXT: optional tranextDir → ImportFile + wf_write2* (typed CS/DA/RA/FO_TCDBF).
  */
@@ -18,6 +19,14 @@ import { DEMO_ACCTENT, DEMO_PARAMS, demoCdrInput, demoFocusInput } from "./fixtu
 import { runFocusMapping, type FocusInput } from "./focus.js";
 import { runGrpMapping } from "./grp.js";
 import { renameTrnToDbf } from "./miscrenm.js";
+import {
+  feedbackFormName,
+  letterMonth,
+  resolveXpByEmail,
+  runSendmail,
+  type SendmailInput,
+  type SendmailResult,
+} from "./sendmail.js";
 import type { BpyFileRow, DailyStore, GrpFileRow } from "./store.js";
 import {
   FOCUS_TRANEXT_FILES,
@@ -78,6 +87,10 @@ export interface UnloadInput {
   tranextFoCode?: string;
   /** When true with mapDownstream, feed FOCUS from typed TRANEXT tables (needs matching ACCTENT). */
   focusFromTranext?: boolean;
+  /** When false, skip wf_sendmail after mail/inbound (default true when any mail candidates). */
+  sendFeedback?: boolean;
+  /** Overrides for R01 subject / XT7 / HTML out dir */
+  sendmail?: Omit<SendmailInput, "processDate">;
 }
 
 export interface UnloadStepLog {
@@ -104,6 +117,8 @@ export interface UnloadResult {
   tranextLoad?: TranextLoadResult;
   /** False when FO_TCDBF control fails after TRANEXT load */
   foControlOk?: boolean;
+  /** Result of wf_sendmail when feedback ran */
+  sendmail?: SendmailResult;
 }
 
 /** FOCUS extract typically drives these writers after wf_procfocusfiles. */
@@ -281,20 +296,39 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
   const focusJobs: Array<{ company: string; foCode: string; subFile: string }> = [];
   const cdrJobs: Array<{ company: string; foCode: string; subFile: string }> = [];
 
+  const xpStrict = store.bdoXpMst.length > 0;
   for (const msg of candidates) {
+    const xp = resolveXpByEmail(store.bdoXpMst, msg.senderEmail);
+    if (xpStrict && !xp) {
+      logs.push({
+        step: "mail-xp-skip",
+        detail: `${msg.id}: Email Not Found: ${msg.senderEmail || "(empty)"}`,
+        ok: false,
+      });
+      continue;
+    }
+    const sntComp = xp?.company ?? "ALAI";
+    const sntBdo = xp?.bdoCode ?? "???";
+
     if (msg.attachments.length < 1 || msg.subject.trim().toUpperCase().startsWith("NO")) {
+      const isNoTxn = msg.subject.trim().toUpperCase().startsWith("NO");
+      const status = isNoTxn ? "*" : "C";
+      // Letter-month subfile: yy + letterMonth + dd + sntBdo (legacy f_get_lettermonth)
+      const subFile = `${feedbackFormName(today)}${sntBdo}`.slice(0, 12).toUpperCase();
       store.bdoApMst.push({
-        company: "ALAI",
-        bdoCode: "???",
+        company: sntComp,
+        bdoCode: sntBdo,
         source: "2",
         processDate: today,
-        status: msg.subject.trim().toUpperCase().startsWith("NO") ? "*" : "C",
-        subFile: "",
+        status,
+        subFile,
         userId: input.userId,
+        sntComp,
+        sntBdo,
       });
       logs.push({
         step: "mail-no-attach",
-        detail: `${msg.id}: tagged no-transaction/no-attachment`,
+        detail: `${msg.id}: ${sntComp}/${sntBdo} status=${status} subFile=${subFile} (letter=${letterMonth(today)})`,
         ok: true,
       });
       continue;
@@ -312,31 +346,34 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
       }
       const bdo = bdoFromFilename(att.filename);
       const subFile = shortSubFile(att.filename);
+      const company = cls.company ?? sntComp;
       store.bdoApMst.push({
-        company: cls.company ?? "ALAI",
+        company,
         bdoCode: bdo,
         source: cls.appsrce,
         processDate: today,
         status: "Y",
         subFile,
         userId: input.userId,
+        sntComp,
+        sntBdo,
       });
       if (cls.kind === "FOCUS") {
         focusFiles++;
-        focusJobs.push({ company: cls.company ?? "ALAI", foCode: bdo, subFile });
+        focusJobs.push({ company, foCode: bdo, subFile });
         for (const w of FOCUS_TRANEXT_WRITERS) tranextPlan.add(w);
         logs.push({
           step: "focus",
-          detail: `${att.filename} → wf_procfocusfiles / w_focusinterfaceprocess (${cls.company}/${bdo})`,
+          detail: `${att.filename} → wf_procfocusfiles / w_focusinterfaceprocess (${company}/${bdo}; snt=${sntComp}/${sntBdo})`,
           ok: true,
         });
       } else {
         cdrFiles++;
-        cdrJobs.push({ company: cls.company ?? "AP", foCode: bdo, subFile });
+        cdrJobs.push({ company, foCode: bdo, subFile });
         for (const w of CDR_TRANEXT_WRITERS) tranextPlan.add(w);
         logs.push({
           step: "cdr",
-          detail: `${att.filename} → wf_proccdrfiles / w_cdrinterfaceprocess (${cls.company}/${bdo})`,
+          detail: `${att.filename} → wf_proccdrfiles / w_cdrinterfaceprocess (${company}/${bdo}; snt=${sntComp}/${sntBdo})`,
           ok: true,
         });
       }
@@ -591,6 +628,29 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     }
   }
 
+  let sendmail: SendmailResult | undefined;
+  const wantSend =
+    input.sendFeedback !== false &&
+    (candidates.length > 0 || store.bdoApMst.some((r) => r.processDate === today));
+  if (wantSend) {
+    sendmail = runSendmail(store, {
+      processDate: today,
+      ...(input.sendmail ?? {}),
+    });
+    logs.push({
+      step: "sendmail",
+      detail: sendmail.detail,
+      ok: sendmail.ok,
+    });
+    for (const p of sendmail.plans) {
+      logs.push({
+        step: "sendmail-plan",
+        detail: p.detail,
+        ok: p.sent || !!p.recipient,
+      });
+    }
+  }
+
   return {
     logs,
     focusFiles,
@@ -601,5 +661,6 @@ export function runUnload(store: DailyStore, input: UnloadInput): UnloadResult {
     tranextPlan: [...tranextPlan],
     tranextLoad,
     foControlOk,
+    sendmail,
   };
 }

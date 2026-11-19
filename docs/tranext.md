@@ -58,4 +58,4 @@ Not in the ALAI FOCUS `TRANEXT` sample folder — CDR unload imports them separa
 
 ## Still pending
 
-Richer unload mail (`wf_procmail` / `wf_sendmail`). SYRADJPARM adj loop is empty in extracted PB (no-op).
+MAPI/ARJ unload attach path; `focusWorkingFromStore` VD/VE→disAddDed. SYRADJPARM adj loop is empty in extracted PB (no-op).

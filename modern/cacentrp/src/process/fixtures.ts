@@ -2,6 +2,14 @@
 import type { AcctEntRule, CacParams } from "./currledge.js";
 import type { FocusInput } from "./focus.js";
 import type { CdrInput } from "./cdr.js";
+import type { BdoXpMstRow } from "./store.js";
+
+/** Demo BDOXPMST rows for mail resolve / sendmail. */
+export const DEMO_BDOXPMST: BdoXpMstRow[] = [
+  { email: "fo@example.com", company: "ALAI", bdoCode: "080", source: "1" },
+  { email: "fo@example.com", company: "ALAI", bdoCode: "080", source: "2" },
+  { email: "cdr@example.com", company: "AP", bdoCode: "080", source: "2" },
+];
 
 export const DEMO_PARAMS: CacParams = {
   excessCashAcct: "214000",
