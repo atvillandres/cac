@@ -1,8 +1,9 @@
 /**
- * Minimal dBase III (.DBF) reader for TRANEXT FO extract packs.
+ * Minimal dBase III (.DBF) reader/writer for TRANEXT FO extract packs
+ * and inbound BPY/GRP misc files.
  * Supports character / numeric / date fields used by CAC sample DBFs.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 export interface DbfField {
   name: string;
@@ -75,4 +76,62 @@ export function readDbfBuffer(buf: Buffer): DbfTable {
 
 export function readDbfFile(path: string): DbfTable {
   return readDbfBuffer(readFileSync(path));
+}
+
+export interface WriteDbfField {
+  name: string;
+  length: number;
+  /** Default 'C' (character). */
+  type?: "C" | "N" | "D";
+  decimals?: number;
+}
+
+/** Write a minimal dBase III table (character-oriented; for fixtures/tests). */
+export function writeDbfFile(
+  path: string,
+  fields: WriteDbfField[],
+  records: Record<string, string | number>[],
+): void {
+  if (!fields.length) throw new Error("writeDbfFile: no fields");
+  const headerLength = 32 + fields.length * 32 + 1;
+  const recordLength = 1 + fields.reduce((s, f) => s + f.length, 0);
+  const buf = Buffer.alloc(headerLength + records.length * recordLength + 1, 0);
+  buf[0] = 0x03; // dBase III
+  const now = new Date();
+  buf[1] = now.getFullYear() - 1900;
+  buf[2] = now.getMonth() + 1;
+  buf[3] = now.getDate();
+  buf.writeUInt32LE(records.length, 4);
+  buf.writeUInt16LE(headerLength, 8);
+  buf.writeUInt16LE(recordLength, 10);
+  let off = 32;
+  for (const f of fields) {
+    const name = f.name.toUpperCase().slice(0, 11);
+    buf.write(name, off, "ascii");
+    buf[off + 11] = (f.type ?? "C").charCodeAt(0);
+    buf[off + 16] = f.length;
+    buf[off + 17] = f.decimals ?? 0;
+    off += 32;
+  }
+  buf[off] = 0x0d; // header terminator
+
+  let recOff = headerLength;
+  for (const row of records) {
+    buf[recOff] = 0x20; // not deleted
+    let pos = recOff + 1;
+    for (const f of fields) {
+      const key = Object.keys(row).find((k) => k.toUpperCase() === f.name.toUpperCase());
+      let raw = key !== undefined ? String(row[key] ?? "") : "";
+      if ((f.type ?? "C") === "N") {
+        raw = raw.slice(0, f.length).padStart(f.length, " ");
+      } else {
+        raw = raw.slice(0, f.length).padEnd(f.length, " ");
+      }
+      buf.write(raw, pos, f.length, "latin1");
+      pos += f.length;
+    }
+    recOff += recordLength;
+  }
+  buf[recOff] = 0x1a; // EOF
+  writeFileSync(path, buf.subarray(0, recOff + 1));
 }
