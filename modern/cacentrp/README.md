@@ -2,6 +2,8 @@
 
 TypeScript replacement for the PowerBuilder 7 stub **`cacentrp.exe`**, bootstrapping **CAC Enterprise** (*Centralized Accounting Channel*).
 
+> **Node.js not allowed?** Use the Java port: [`../cacentrp-java`](../cacentrp-java) (`docs/deploy-java.md`).
+
 ## Run
 
 ```bash
