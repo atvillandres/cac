@@ -5,7 +5,7 @@ public final class DbAdapters {
 
   public static DbAdapter create(DbMode mode) {
     return switch (mode) {
-      case JDBC -> new JdbcDbAdapter();
+      case ODBC, JDBC -> new JdbcDbAdapter();
       case MOCK -> new MockDbAdapter();
     };
   }

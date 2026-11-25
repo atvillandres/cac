@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,15 +18,12 @@ import ph.cac.cacentrp.db.DbAdapters;
 import ph.cac.cacentrp.db.DbMode;
 import ph.cac.cacentrp.process.DailyStore;
 import ph.cac.cacentrp.process.EndOfDay;
+import ph.cac.cacentrp.process.GlWalker;
+import ph.cac.cacentrp.process.GlwPublish;
 import ph.cac.cacentrp.process.Pipeline;
 
 /**
- * Java entry point for CAC Enterprise — institutional alternative to Node cacentrp.
- *
- * <pre>
- *   java -jar cacentrp.jar [--variant AP] [--db mock|jdbc] [--ini path] [--user U] [--password P]
- *   java -jar cacentrp.jar daily list|inspect|endofday [--seed-ledger] [--user U]
- * </pre>
+ * Java CAC — scoped flow: ODBC login → APLN *P.GLW → publish to I:\adhoc + backup.
  */
 public final class Main {
   private Main() {}
@@ -47,30 +45,36 @@ public final class Main {
     System.out.println("""
         Usage:
           cacentrp [login options]
-          cacentrp daily <list|inspect|endofday> [daily-options]
+          cacentrp daily <list|inspect|pglw|publish|endofday> [options]
 
         Login options:
-          --variant ALAI|AP|PBL   Deployment flavor (default: ALAI)
-          --db mock|jdbc          Database mode (default: mock; env CAC_DB=jdbc)
+          --variant ALAI|AP|PBL   Deployment flavor (default: AP for P.GLW)
+          --db mock|odbc|jdbc     Database mode (default: mock; env CAC_DB=odbc)
           --ini <path>            Path to cac.ini / alaicac.ini
           --user <id>             Non-interactive login user
           --password <pwd>        Non-interactive login password
           --inspect               Print INI summary and exit
 
-        Daily options:
-          --user <id>             Operator user id (default: DEMO)
-          --seed-ledger           Seed demo CURRLEDGE rows before endofday
+        daily pglw options:
+          --user <id>             Operator (default: DEMO)
+          --seed-ledger           Seed demo APLN CURRLEDGE rows
+          --out <dir>             GLWALKER output (default: C:\\CACENT~~1\\GLWALKER)
 
-        AS400 JDBC (real login):
-          set CAC_DB=jdbc
+        daily publish options:
+          --glwalker <dir>        Source GLWALKER folder
+          --adhoc <dir>           Destination (default: I:\\adhoc)
+
+        ODBC (same DSNs as PowerBuilder):
+          set CAC_DB=odbc
           set CAC_AS400_HOST=your.as400.host
           set CAC_JDBC_CACDB=jdbc:as400://host/CACDB;naming=system
-          (also CAC_JDBC_APMODDTA, CAC_JDBC_RAWDATA — see docs/deploy-java.md)
+          set CAC_JDBC_APMODDTA=jdbc:as400://host/APMODDTA;naming=system
+          set CAC_JDBC_RAWDATA=jdbc:as400://host/RAWDATA;naming=system
         """);
   }
 
   private static void runLoginShell(List<String> argv) throws Exception {
-    Variant variant = Variant.ALAI;
+    Variant variant = Variant.AP;
     DbMode dbMode = DbMode.parse(null);
     Path iniPath = null;
     String user = null;
@@ -103,7 +107,7 @@ public final class Main {
       config = new IniConfig(java.util.Map.of(), null, null, List.of(), java.util.Map.of());
     }
 
-    System.out.println("=== CAC Enterprise (Java cacentrp) ===\n");
+    System.out.println("=== CAC Enterprise (Java · APLN *P.GLW) ===\n");
     System.out.println("Variant : " + variant);
     System.out.println(config.summarize());
     System.out.println();
@@ -118,20 +122,18 @@ public final class Main {
     }
 
     System.out.println("Database mode: " + dbMode.name().toLowerCase(Locale.ROOT)
-        + (dbMode == DbMode.MOCK ? " (set --db jdbc or CAC_DB=jdbc for AS400)" : ""));
+        + (dbMode == DbMode.MOCK ? " (set --db odbc or CAC_DB=odbc for AS400 DSNs)" : " · ODBC DSN profiles"));
 
     try (DbAdapter db = DbAdapters.create(dbMode)) {
       Session session = Login.login(variant, config, db, user, password == null ? "" : password);
       System.out.println("\nOpening CAC Enterprise...\n");
       System.out.println(Frame.render(session));
-      System.out.println("Daily processing: cacentrp daily list | inspect | endofday");
-      if (dbMode == DbMode.JDBC) {
-        System.out.println("Note: daily CURRLEDGE mappers are still migrating from TypeScript; JDBC is used for login/SYRUSERID.");
-      }
+      System.out.println("P.GLW flow: cacentrp daily pglw --seed-ledger | publish");
+      System.out.println(Pipeline.inspect());
     }
   }
 
-  private static void runDaily(List<String> argv) {
+  private static void runDaily(List<String> argv) throws Exception {
     if (argv.isEmpty()) {
       usage();
       return;
@@ -139,19 +141,42 @@ public final class Main {
     String cmd = argv.get(0);
     String userId = "DEMO";
     boolean seed = false;
+    Path outDir = Path.of(GlWalker.DEFAULT_GLWALKER_DIR);
+    Path glwalkerDir = Path.of(GlWalker.DEFAULT_GLWALKER_DIR);
+    Path adhocDir = Path.of(GlwPublish.DEFAULT_ADHOC);
+
     for (int i = 1; i < argv.size(); i++) {
       String a = argv.get(i);
-      if ("--user".equals(a)) userId = argv.get(++i);
-      else if ("--seed-ledger".equals(a)) seed = true;
-      else throw new IllegalArgumentException("Unknown daily argument: " + a);
+      switch (a) {
+        case "--user" -> userId = argv.get(++i);
+        case "--seed-ledger" -> seed = true;
+        case "--out" -> outDir = Path.of(argv.get(++i));
+        case "--glwalker" -> glwalkerDir = Path.of(argv.get(++i));
+        case "--adhoc" -> adhocDir = Path.of(argv.get(++i));
+        default -> throw new IllegalArgumentException("Unknown daily argument: " + a);
+      }
     }
 
     switch (cmd) {
       case "list" -> {
-        System.out.println("=== Daily Processing stages (Java) ===\n");
+        System.out.println("=== P.GLW flow stages ===\n");
         System.out.print(Pipeline.formatStages());
       }
       case "inspect" -> System.out.print(Pipeline.inspect());
+      case "pglw" -> {
+        DailyStore store = DailyStore.create();
+        if (seed || store.currLedge.isEmpty()) store.seedApln(8, userId);
+        GlWalker.Result r = GlWalker.runAplnPglw(store.currLedge, GlWalker.Options.defaults(outDir));
+        System.out.println((r.ok() ? "OK" : "!!") + " " + r.detail());
+        if (r.path() != null) System.out.println("path=" + r.path());
+        System.out.println("headers=" + r.headerCount() + " details=" + r.detailCount()
+            + " CURRLEDGE=" + store.currLedge.size());
+      }
+      case "publish" -> {
+        GlwPublish.Result r = GlwPublish.publishPglw(glwalkerDir, adhocDir, LocalDate.now());
+        System.out.println(r.detail());
+        for (String f : r.files()) System.out.println("  " + f);
+      }
       case "endofday" -> {
         DailyStore store = DailyStore.create();
         if (seed) store.seedDemo(5, userId);
@@ -160,11 +185,10 @@ public final class Main {
         System.out.println("CURRLEDGE=" + store.currLedge.size() + " CURRLEDGEX=" + store.currLedgeX.size());
       }
       default -> throw new IllegalArgumentException(
-          "Unknown daily command: " + cmd + " (use list|inspect|endofday)");
+          "Unknown daily command: " + cmd + " (use list|inspect|pglw|publish|endofday)");
     }
   }
 
-  /** Prefer filesystem path next to CWD, else extract from classpath resources. */
   static Path resolveIni(String resource) throws Exception {
     Path local = Path.of("src/main/resources", resource);
     if (Files.isRegularFile(local)) return local.toAbsolutePath();
@@ -178,7 +202,6 @@ public final class Main {
     if ("file".equals(url.getProtocol())) {
       return Path.of(url.toURI());
     }
-    // shaded jar: copy to temp
     Path tmp = Files.createTempFile("cac-", "-" + Path.of(resource).getFileName());
     try (var in = Main.class.getClassLoader().getResourceAsStream(resource)) {
       if (in == null) throw new IllegalStateException("Missing resource stream " + resource);

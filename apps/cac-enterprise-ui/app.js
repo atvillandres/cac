@@ -1,111 +1,85 @@
+/** CAC UI — login → APLN *P.GLW only (concept UI for Java/ODBC runtime). */
+
+const GLWALKER = "C:\\CACENT~~1\\GLWALKER";
+const ADHOC = "I:\\adhoc";
+
 const STAGES = [
   {
-    id: "delflecf",
-    title: "DELFLECF cleanup",
-    eyebrow: "App open",
-    desc: "Delete stale *.FC? / *.CDR temp attachments before mail unload.",
+    id: "odbc-login",
+    title: "ODBC connect",
+    eyebrow: "Login",
+    desc: "Connect CACDB / APMODDTA / RAWDATA and validate SYRUSERID (Java --db odbc).",
     run: (s) => {
-      log(s, "info", "DELFLECF", "No matching temp files (sample)");
+      log(s, "ok", "odbc", `Connected profiles for ${s.variant}; user ${s.userId}`);
+      log(s, "ok", "syruserid", "USERID validated");
       return { ok: true };
     },
   },
   {
-    id: "unload",
-    title: "Auto Email Detach",
-    eyebrow: "w_unload",
-    desc: "MISCRENM, BDOXPMST resolve, classify FCS/CDR, plan TRANEXT writers.",
+    id: "prep-apln",
+    title: "Prepare APLN CURRLEDGE",
+    eyebrow: "Ledger",
+    desc: "Stage NLSP CURRLEDGE rows for company APLN (feeds *P.GLW only).",
     run: (s) => {
-      s.focusJobs = 1;
-      s.cdrJobs = 1;
-      s.bdo += 3;
-      log(s, "ok", "mail", "CAC-LSP File → FOCUS 080 / CDR 080 (snt=ALAI/080)");
-      log(s, "ok", "miscrenm", "renamed 1 *.TRN → *.DBF");
-      log(s, "ok", "fo-control", "FO_TCDBF OK (ΣTC_COUNT=6)");
+      s.ledge = 8;
+      log(s, "ok", "currledge", "APLN NLSP rows ready · 8 lines");
       return { ok: true };
     },
   },
   {
-    id: "tranext",
-    title: "TRANEXT load",
-    eyebrow: "wf_write2*",
-    desc: "ImportFile CS/DA/RA–VH into OR/DIS working tables; VD/VE → add/ded.",
-    run: (s) => {
-      log(s, "ok", "tranext", "Loaded RA/RB/RC/RE/CS/DA (+ VD/VE add-ded bridge)");
-      return { ok: true };
-    },
-  },
-  {
-    id: "map",
-    title: "Map to CURRLEDGE",
-    eyebrow: "FOCUS · CDR · BPY · GRP",
-    desc: "Stage pipelines write balanced CURRLEDGE rows for NLSP GLW.",
-    run: (s) => {
-      s.ledge += 48;
-      s.bdo += 2;
-      log(s, "ok", "map-focus", "Success.bat · 24 rows · BDO L");
-      log(s, "ok", "map-cdr", "CACPAR01 balanced · 8 rows");
-      log(s, "ok", "map-bpy", "BPYFILE → 8 rows");
-      log(s, "ok", "map-grp", "GRPFILE → 8 rows");
-      return { ok: true };
-    },
-  },
-  {
-    id: "lsp",
-    title: "LSP upload",
-    eyebrow: "optional",
-    desc: "CURRLEDGE recDest=lsp → UN_mmdd.lsp. LSP merge into GLW uses GLWDTL.",
-    run: (s) => {
-      log(s, "info", "lspupload", "Sample: skipped (no lsp-dest rows)");
-      return { ok: true };
-    },
-  },
-  {
-    id: "glwalker",
-    title: "Create GLW File",
+    id: "gen-pglw",
+    title: "Generate *P.GLW",
     eyebrow: "w_glwalker",
-    desc: "Merge NLSP CURRLEDGE + LSP GLWDTL into mmddyy{H,A,P}.GLW.",
+    desc: "Write fixed-width mmddyyP.GLW (company APLANS) to GLWALKER folder.",
     run: (s) => {
       const stamp = mmddyy(new Date());
-      s.glwFiles = [
-        { company: "AHCI", name: `${stamp}H.GLW`, details: 12, headers: 2 },
-        { company: "ALAI", name: `${stamp}A.GLW`, details: 28, headers: 3 },
-        { company: "APLN", name: `${stamp}P.GLW`, details: 8, headers: 1 },
-      ];
+      const name = `${stamp}P.GLW`;
+      s.pGlw = {
+        company: "APLN",
+        name,
+        path: `${GLWALKER}\\${name}`,
+        headers: 1,
+        details: s.ledge || 8,
+      };
       s.glwDone = true;
-      log(s, "ok", "glwalker", `Wrote ${s.glwFiles.map((f) => f.name).join(", ")}`);
+      log(s, "ok", "glwalker", `Wrote ${name} → ${GLWALKER}`);
       return { ok: true };
     },
   },
   {
-    id: "eod",
-    title: "End of Day",
-    eyebrow: "w_endofday",
-    desc: "Archive CURRLEDGE → CURRLEDGEX after GL Walker is confirmed.",
+    id: "publish",
+    title: "Publish *P.GLW",
+    eyebrow: "adhoc + backup",
+    desc: `Copy *P.GLW to ${ADHOC}, then move original into GLWALKER\\backup_yyyymmdd\\.`,
     run: (s) => {
-      if (!s.glwDone) {
-        log(s, "bad", "endofday", "Refused — run Create GLW File first");
+      if (!s.pGlw) {
+        log(s, "bad", "publish", "Generate *P.GLW first");
         return { ok: false };
       }
-      const archived = s.ledge;
-      s.ledge = 0;
-      log(s, "ok", "endofday", `Archived ${archived} CURRLEDGE row(s) → CURRLEDGEX`);
+      const ymd = yyyymmdd(new Date());
+      const backupDir = `${GLWALKER}\\backup_${ymd}`;
+      s.published = {
+        copyTo: `${ADHOC}\\${s.pGlw.name}`,
+        backupTo: `${backupDir}\\${s.pGlw.name}`,
+      };
+      log(s, "ok", "copy", `Copied → ${s.published.copyTo}`);
+      log(s, "ok", "move", `Moved → ${s.published.backupTo}`);
       return { ok: true };
     },
   },
 ];
 
 const state = {
-  variant: "ALAI",
+  variant: "AP",
+  dbMode: "odbc",
   userId: "DEMO",
   cursor: 0,
   done: new Set(),
   running: null,
   ledge: 0,
-  bdo: 0,
-  focusJobs: 0,
-  cdrJobs: 0,
-  glwFiles: [],
+  pGlw: null,
   glwDone: false,
+  published: null,
   logs: [],
 };
 
@@ -114,6 +88,13 @@ function mmddyy(d) {
   const dd = String(d.getDate()).padStart(2, "0");
   const yy = String(d.getFullYear()).slice(-2);
   return `${mm}${dd}${yy}`;
+}
+
+function yyyymmdd(d) {
+  const y = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}${mm}${dd}`;
 }
 
 function $(id) {
@@ -129,6 +110,13 @@ function show(viewId) {
     el.hidden = el.id !== viewId;
     el.classList.toggle("is-active", el.id === viewId);
   }
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("cac-theme", theme);
+  $("btn-theme").textContent = theme === "dark" ? "Light" : "Dark";
+  $("btn-theme").setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
 }
 
 function renderStages() {
@@ -156,11 +144,10 @@ function renderWorkspace() {
   $("ws-eyebrow").textContent = stage.eyebrow;
   $("ws-title").textContent = stage.title;
   $("ws-desc").textContent = stage.desc;
-  $("session-meta").textContent = `${state.variant} · ${state.userId}`;
+  $("session-meta").textContent = `${state.variant} · ${state.userId} · ${state.dbMode.toUpperCase()}`;
   $("stat-ledge").textContent = String(state.ledge);
-  $("stat-bdo").textContent = String(state.bdo);
-  $("stat-focus").textContent = String(state.focusJobs);
-  $("stat-cdr").textContent = String(state.cdrJobs);
+  $("stat-pglw").textContent = state.pGlw ? state.pGlw.name : "—";
+  $("stat-pub").textContent = state.published ? "done" : "—";
 
   const logEl = $("activity-log");
   logEl.innerHTML = "";
@@ -170,52 +157,61 @@ function renderWorkspace() {
     logEl.appendChild(li);
   }
   if (!state.logs.length) {
-    logEl.innerHTML = `<li><span class="info">READY</span><div>Run a pipeline step to simulate daily processing.</div></li>`;
+    logEl.innerHTML = `<li><span class="info">READY</span><div>Run steps from ODBC login through *P.GLW publish.</div></li>`;
   }
 
   const box = $("glw-box");
   const navGlw = document.querySelector('[data-panel="glw"]');
-  if (state.glwFiles.length) {
+  if (state.pGlw) {
     box.hidden = false;
     navGlw.disabled = false;
-    $("glw-files").innerHTML = state.glwFiles
-      .map(
-        (f) =>
-          `<li><span>${f.name}</span><em>${f.company} · ${f.details} dtl</em></li>`,
-      )
-      .join("");
+    $("glw-files").innerHTML = `<li><span>${state.pGlw.name}</span><em>APLN · ${state.pGlw.details} dtl</em></li>`;
   } else {
     box.hidden = true;
     navGlw.disabled = true;
   }
 
-  const atEnd = state.cursor >= STAGES.length;
-  $("btn-run-step").disabled = atEnd || state.running !== null;
+  $("btn-run-step").disabled = state.cursor >= STAGES.length || state.running !== null;
   $("btn-run-all").disabled = state.glwDone || state.running !== null;
 }
 
 function renderGlwView() {
-  const stamp = mmddyy(new Date());
-  $("glw-day-title").textContent = `GLW pack · ${stamp}`;
+  const f = state.pGlw;
+  $("glw-day-title").textContent = f ? f.name : "*P.GLW";
+  $("glw-src-path").textContent = `${GLWALKER}\\`;
   const cards = $("glw-cards");
-  cards.innerHTML = state.glwFiles
-    .map(
-      (f) => `
-      <article class="glw-card">
-        <div class="co">${f.company}</div>
-        <h3>${f.name}</h3>
-        <p>${f.headers} header(s) · ${f.details} detail line(s)<br/>rectypes 00 → 01 → 02</p>
-      </article>`,
-    )
-    .join("");
+  if (!f) {
+    cards.innerHTML = "";
+    $("glw-snippet").textContent = "";
+    return;
+  }
+  const stamp = mmddyy(new Date());
+  cards.innerHTML = `
+    <article class="glw-card">
+      <div class="co">APLN</div>
+      <h3>${f.name}</h3>
+      <p>${f.headers} header(s) · ${f.details} detail line(s)<br/>company code APLANS · 00 → 01 → 02</p>
+    </article>
+    <article class="glw-card">
+      <div class="co">Publish</div>
+      <h3>I:\\adhoc</h3>
+      <p>Copy file, then move source into<br/><code>backup_${yyyymmdd(new Date())}</code></p>
+    </article>`;
   $("glw-snippet").textContent = [
-    "00CAC1" + stamp + "00030028...",
-    "01CAC1" + stamp + "CAC" + stamp + "...",
-    "02CAC1" + stamp + "CAC" + stamp + "0001 ALAI  101001...",
-    "02CAC1" + stamp + "CAC" + stamp + "0002 ALAI  401001...",
+    `00${pad("1", 12)}${pad(String(f.details), 12)}…`,
+    `01CAC1${stamp}… APLANS …`,
+    `02CAC1${stamp}CAC${stamp}0001 APLANS 101001…`,
+    `02CAC1${stamp}CAC${stamp}0002 APLANS 401001…`,
     "…",
   ].join("\n");
-  $("eod-msg").textContent = "";
+  $("publish-msg").textContent = state.published
+    ? `Copied to ${state.published.copyTo}; archived ${state.published.backupTo}`
+    : "";
+  $("btn-publish").disabled = !f;
+}
+
+function pad(s, n) {
+  return String(s).padStart(n, "0");
 }
 
 async function sleep(ms) {
@@ -228,7 +224,7 @@ async function runCurrentStep() {
   state.running = stage.id;
   renderStages();
   renderWorkspace();
-  await sleep(420);
+  await sleep(380);
   const result = stage.run(state);
   state.running = null;
   if (result.ok) {
@@ -237,48 +233,57 @@ async function runCurrentStep() {
   }
   renderStages();
   renderWorkspace();
-  if (stage.id === "glwalker" && state.glwDone) {
-    // soft prompt toward GLW console
+}
+
+async function runThroughPglw() {
+  while (state.cursor < STAGES.length) {
+    const before = state.cursor;
+    const id = STAGES[before].id;
+    await runCurrentStep();
+    if (state.cursor === before && !state.done.has(id)) break;
+    if (id === "gen-pglw") break;
   }
 }
 
-async function runThroughGlw() {
-  while (state.cursor < STAGES.length && STAGES[state.cursor].id !== "eod") {
-    const before = state.cursor;
-    await runCurrentStep();
-    if (state.cursor === before && !state.done.has(STAGES[before].id)) break;
-    if (STAGES[before].id === "glwalker") break;
-  }
+function resetState() {
+  Object.assign(state, {
+    cursor: 0,
+    done: new Set(),
+    running: null,
+    ledge: 0,
+    pGlw: null,
+    glwDone: false,
+    published: null,
+    logs: [],
+  });
 }
 
 function bind() {
+  const saved = localStorage.getItem("cac-theme") || "dark";
+  applyTheme(saved);
+  $("btn-theme").addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+
   $("login-form").addEventListener("submit", (e) => {
     e.preventDefault();
     state.variant = $("variant").value;
+    state.dbMode = $("dbMode").value;
     state.userId = $("userId").value.trim() || "DEMO";
+    resetState();
     show("view-app");
     renderStages();
     renderWorkspace();
   });
 
   $("btn-signout").addEventListener("click", () => {
-    Object.assign(state, {
-      cursor: 0,
-      done: new Set(),
-      running: null,
-      ledge: 0,
-      bdo: 0,
-      focusJobs: 0,
-      cdrJobs: 0,
-      glwFiles: [],
-      glwDone: false,
-      logs: [],
-    });
+    resetState();
     show("view-login");
   });
 
   $("btn-run-step").addEventListener("click", () => runCurrentStep());
-  $("btn-run-all").addEventListener("click", () => runThroughGlw());
+  $("btn-run-all").addEventListener("click", () => runThroughPglw());
   $("btn-view-glw").addEventListener("click", () => {
     show("view-glw");
     renderGlwView();
@@ -288,20 +293,17 @@ function bind() {
     show("view-glw");
     renderGlwView();
   });
-  document.querySelector('[data-panel="daily"]').addEventListener("click", () => {
+  document.querySelector('[data-panel="flow"]').addEventListener("click", () => {
     show("view-app");
     renderWorkspace();
   });
-  $("btn-back-daily").addEventListener("click", () => {
+  $("btn-back-flow").addEventListener("click", () => {
     show("view-app");
     renderWorkspace();
   });
-  $("btn-eod").addEventListener("click", async () => {
-    state.cursor = STAGES.findIndex((s) => s.id === "eod");
+  $("btn-publish").addEventListener("click", async () => {
+    state.cursor = STAGES.findIndex((s) => s.id === "publish");
     await runCurrentStep();
-    $("eod-msg").textContent = state.done.has("eod")
-      ? "End of day complete — ledger archived."
-      : "End of day did not complete.";
     renderGlwView();
   });
 }

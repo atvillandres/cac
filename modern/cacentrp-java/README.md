@@ -44,14 +44,23 @@ AP login connects **CACDB → APMODDTA → RAWDATA**, then `SELECT … FROM SYRU
 
 See [`docs/deploy-java.md`](../../docs/deploy-java.md).
 
+## P.GLW flow (APLN only)
+
+```bash
+java -jar target/cacentrp.jar --variant AP --db odbc --user U --password P
+java -jar target/cacentrp.jar daily pglw --seed-ledger --out /tmp/GLWALKER
+java -jar target/cacentrp.jar daily publish --glwalker /tmp/GLWALKER --adhoc /tmp/adhoc
+```
+
 ## Status
 
 | Area | Java status |
 |------|-------------|
-| Login + INI + mock/JDBC | Done |
+| Login + INI + mock/ODBC/JDBC | Done |
+| APLN `*P.GLW` writer | Done |
+| Publish → `I:\adhoc` + `backup_yyyyMMdd` | Done |
 | End of Day (in-memory) | Done |
-| Daily stage list/inspect | Done |
-| Unload / TRANEXT / FOCUS / CDR / BPY / GRP / BRS / LSP / GLW | Still in TypeScript (`../cacentrp`); port next |
+| Unload / TRANEXT / FOCUS / CDR / BPY / GRP / BRS / LSP / H·A GLW | Still TypeScript |
 
 ## Layout
 
