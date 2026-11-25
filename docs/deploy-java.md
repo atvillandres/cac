@@ -46,12 +46,26 @@ Offline/dev without AS400:
 java -jar cacentrp.jar --variant AP --db mock --user DEMO --password demo
 ```
 
+## P.GLW-only flow (APLN)
+
+Scoped Java path (login → `*P.GLW` → publish):
+
+```bat
+java -jar cacentrp.jar --variant AP --db odbc --user YOURUSER --password YOURPASS
+java -jar cacentrp.jar daily pglw --seed-ledger --out C:\CACENT~~1\GLWALKER
+java -jar cacentrp.jar daily publish --glwalker C:\CACENT~~1\GLWALKER --adhoc I:\adhoc
+```
+
+`daily publish` copies every `*P.GLW` to `I:\adhoc`, then moves each file into `GLWALKER\backup_yyyyMMdd\`.
+
+`--db odbc` uses the same DSN **names** as PowerBuilder (`CACDB`, `APMODDTA`, `RAWDATA`) via JT400 JDBC URLs (`CAC_JDBC_*` / `CAC_AS400_HOST`).
+
 ## What is / isn’t real yet
 
-- **Real:** JDBC connect + `SYRUSERID` validation; End-of-Day in-memory archive; CLI packaging.
-- **Still TypeScript / pending Java port:** unload, TRANEXT, FOCUS, CDR, BPY, GRP, BRS, LSP, GL Walker writers.
+- **Real (Java):** ODBC/JDBC login + `SYRUSERID`; APLN `*P.GLW` writer; publish copy/backup; End-of-Day in-memory archive.
+- **Still TypeScript / pending Java:** full unload, TRANEXT, FOCUS, CDR, BPY, GRP, BRS, LSP, H/A GLW packs.
 
-Until those modules are migrated, keep legacy PB (or the TS tree on a non-restricted build host) for full daily file mapping — or request the next Java pipeline slice.
+UI mock for this flow: `apps/cac-enterprise-ui` (dark mode toggle).
 
 ## INI
 
